@@ -1,0 +1,20 @@
+[package]
+name = "twml"
+description = "Tailwind Markup Language"
+version = "0.1.0"
+license = "MIT"
+authors = ["DISTREAT"]
+repository = "https://github.com/DISTREAT/twml"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+dyn-fmt = "0.4.0"
+headless_chrome = { version = "1.0.8", features = ["fetch"] }
+indoc = "2.0.4"
+pest = "2.7.5"
+pest_derive = "2.7.5"
+railwind = "0.1.5"
+tempfile = "3.8.1"
