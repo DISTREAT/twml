@@ -155,6 +155,9 @@ impl DocumentParser {
                             Rule::block_newline => {
                                 html.push_str("<br>");
                             }
+                            Rule::element => {
+                                html.push_str(&Self::generate_html_element(class_pair)?);
+                            }
                             _ => {
                                 return Err(anyhow!(format!(
                                     "Unexpected block rule: {:?}",
