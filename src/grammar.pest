@@ -22,7 +22,8 @@ elements = _{ element_first ~ ( NEWLINE+ ~ element_continue )* }
 element_first = _{ ( element | comment ) }
 element_continue = _{ PEEK_ALL ~ ( element | comment ) }
 
-block = { block_content_first ~ ( NEWLINE+ ~ block_content_continue )* }
+block = { block_content_first ~ ( NEWLINE ~ block_newline* ~ block_content_continue )* }
+block_newline = { NEWLINE }
 block_content = { ( !NEWLINE ~ ANY )+ }
 block_content_first = _{ block_content }
 block_content_continue = _{ PEEK_ALL ~ block_content }

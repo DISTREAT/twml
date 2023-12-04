@@ -143,16 +143,25 @@ impl DocumentParser {
                     let mut newline_needed = false;
 
                     for class_pair in pair.into_inner() {
-                        if class_pair.as_rule() != Rule::block_content {
-                            return Err(anyhow!("Unexpected block rule"));
-                        }
+                        match class_pair.as_rule() {
+                            Rule::block_content => {
+                                if newline_needed {
+                                    html.push_str("<br>");
+                                }
 
-                        if newline_needed {
-                            html.push_str("<br>");
+                                html.push_str(class_pair.as_span().as_str());
+                                newline_needed = true;
+                            }
+                            Rule::block_newline => {
+                                html.push_str("<br>");
+                            }
+                            _ => {
+                                return Err(anyhow!(format!(
+                                    "Unexpected block rule: {:?}",
+                                    class_pair
+                                )))
+                            }
                         }
-
-                        html.push_str(class_pair.as_span().as_str());
-                        newline_needed = true;
                     }
                 }
                 Rule::element => {
