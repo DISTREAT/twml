@@ -3,7 +3,7 @@ indentation = _{ ( " " | "\t" )+ }
 
 document = ${ NEWLINE* ~ comment* ~ NEWLINE* ~ declarations? ~ NEWLINE* ~ elements ~ NEWLINE* ~ EOI }
 
-declarations = { declaration ~ ( NEWLINE+ ~ declaration )+ }
+declarations = { declaration ~ ( NEWLINE+ ~ declaration )* }
 declaration = { "@" ~ declaration_key ~ whitespace+ ~ declaration_value }
 declaration_key = { ( !whitespace ~ ANY )* }
 declaration_value = { ( !NEWLINE ~ ANY )* }
