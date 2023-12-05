@@ -12,7 +12,7 @@ element = { "\\" ~ element_name ~ element_classes? ~ element_attributes? ~ (whit
 element_name = { ASCII_ALPHA_LOWER+ }
 element_content = { (!NEWLINE ~ ANY)+ }
 element_classes = { ("." ~ element_class_name)+ }
-element_class_name = { ASCII_ALPHANUMERIC+ ~ ( ( "-" | "/" ) ~ ASCII_ALPHANUMERIC+ )* }
+element_class_name = { ASCII_ALPHANUMERIC+ ~ ( "-" | "/" | "[" | "]" | ASCII_ALPHANUMERIC+ )* }
 element_attributes = { "{" ~ whitespace* ~ element_attribute ~ ( " "+ ~ element_attribute )* ~ whitespace* ~ "}" }
 element_attribute = { element_attribute_key ~ "=" ~ "\"" ~ element_attribute_value ~ "\"" }
 element_attribute_key = { ASCII_ALPHA+ }
