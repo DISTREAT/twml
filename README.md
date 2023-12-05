@@ -93,12 +93,10 @@ Simple document:
 Underlining text:
 
 ```
-\\ This is still something I have to think about.
-\\ I consider simplifing this issue in the near future.
-\span.flex.space-x-1
-    \p This is so
+\span
+    This is so
     \p.underline cool
-    \p !
+    !
 ```
 
 Multiple pages:

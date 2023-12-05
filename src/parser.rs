@@ -3,6 +3,7 @@ use dyn_fmt::AsStrFormatExt;
 use indoc::indoc;
 use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -13,6 +14,17 @@ pub struct Declarations {
     pub include: Vec<String>,
     pub page_width_mm: Option<u64>,
     pub page_height_mm: Option<u64>,
+}
+
+#[derive(Debug)]
+enum HtmlToken {
+    ElementName { name: String },
+    ElementClasses { classes: Vec<String> },
+    ElementAttributes { attributes: HashMap<String, String> },
+    ElementInlineContent { content: String },
+    ElementChildren { children: Vec<HtmlToken> },
+    EmptyBlockLine,
+    BlockLine { content: String },
 }
 
 impl DocumentParser {
@@ -81,11 +93,12 @@ impl DocumentParser {
     }
 
     pub fn generate_html(declarations: &Declarations, pairs: Pairs<Rule>) -> Result<String> {
-        let generated_html = Self::generate_html_document(pairs)?;
+        let html_tokens = Self::lex_html_document(pairs)?;
+        let html_body = Self::generate_html_body(&html_tokens, false)?;
 
         let mut warnings: Vec<railwind::warning::Warning> = Vec::new();
         let generated_css = railwind::parse_to_string(
-            railwind::Source::String(generated_html.clone(), railwind::CollectionOptions::Html),
+            railwind::Source::String(html_body.clone(), railwind::CollectionOptions::Html),
             false,
             &mut warnings,
         )
@@ -113,18 +126,73 @@ impl DocumentParser {
             declarations.page_width_mm.unwrap_or(210).to_string(),
             declarations.page_height_mm.unwrap_or(297).to_string(),
             generated_css,
-            generated_html,
+            html_body,
         ]);
 
         Ok(html)
     }
 
-    fn generate_html_document(mut pairs: Pairs<Rule>) -> Result<String> {
+    fn generate_html_body(tokens: &Vec<HtmlToken>, children: bool) -> Result<String> {
         let mut html = String::new();
+        let mut element_name = "";
+        let mut element_unclosed = false;
+        let mut following_block_line = false;
+
+        for token in tokens {
+            match token {
+                HtmlToken::ElementName { name } => {
+                    html.push_str(&format!("<{}", name));
+
+                    element_name = name;
+                    element_unclosed = true;
+                    following_block_line = false;
+                }
+                HtmlToken::ElementClasses { classes } => {
+                    html.push_str(&format!(" class=\"{}\"", classes.join(" ")));
+                }
+                HtmlToken::ElementAttributes { attributes } => {
+                    for (key, value) in attributes.iter() {
+                        html.push_str(&format!(" {}=\"{}\"", key, value));
+                    }
+                }
+                HtmlToken::ElementInlineContent { content } => {
+                    html.push_str(&format!(">{}</{}>", content, element_name));
+
+                    element_unclosed = false;
+                }
+                HtmlToken::ElementChildren { children } => {
+                    html.push('>');
+                    html.push_str(&Self::generate_html_body(children, true)?);
+                    html.push_str(&format!("</{}>", element_name));
+
+                    element_unclosed = false;
+                }
+                HtmlToken::BlockLine { content } => {
+                    if following_block_line {
+                        html.push_str("<br>");
+                    }
+                    html.push_str(content);
+
+                    following_block_line = true;
+                }
+                HtmlToken::EmptyBlockLine => html.push_str("<br>"),
+                // _ => return Err(anyhow!(format!("Unexpected html token: {:?}", token))),
+            }
+        }
+
+        if element_unclosed && !children {
+            html.push('>');
+        }
+
+        Ok(html)
+    }
+
+    fn lex_html_document(mut pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+        let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs.next().unwrap().into_inner() {
             match pair.as_rule() {
-                Rule::element => html.push_str(&Self::generate_html_element(pair)?),
+                Rule::element => html.extend(Self::lex_html_element(pair)?),
                 Rule::EOI => {}
                 Rule::declarations => {}
                 _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
@@ -134,29 +202,24 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn generate_html_children(pairs: Pairs<Rule>) -> Result<String> {
-        let mut html = String::new();
+    fn lex_html_children(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+        let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs {
             match pair.as_rule() {
                 Rule::block => {
-                    let mut newline_needed = false;
-
                     for class_pair in pair.into_inner() {
                         match class_pair.as_rule() {
                             Rule::block_content => {
-                                if newline_needed {
-                                    html.push_str("<br>");
-                                }
-
-                                html.push_str(class_pair.as_span().as_str());
-                                newline_needed = true;
+                                html.push(HtmlToken::BlockLine {
+                                    content: class_pair.as_span().as_str().to_string(),
+                                });
                             }
                             Rule::block_newline => {
-                                html.push_str("<br>");
+                                html.push(HtmlToken::EmptyBlockLine);
                             }
                             Rule::element => {
-                                html.push_str(&Self::generate_html_element(class_pair)?);
+                                html.extend(Self::lex_html_element(class_pair)?);
                             }
                             _ => {
                                 return Err(anyhow!(format!(
@@ -168,7 +231,7 @@ impl DocumentParser {
                     }
                 }
                 Rule::element => {
-                    html.push_str(&Self::generate_html_element(pair)?);
+                    html.extend(Self::lex_html_element(pair)?);
                 }
                 _ => return Err(anyhow!(format!("Unexpected children rule: {:?}", pair))),
             }
@@ -177,37 +240,32 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn generate_html_element(element_pair: Pair<Rule>) -> Result<String> {
-        let mut html = String::from("<");
-        let mut element_name = String::new();
-        let mut element_closed = false;
+    fn lex_html_element(element_pair: Pair<Rule>) -> Result<Vec<HtmlToken>> {
+        let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in element_pair.into_inner() {
             match pair.as_rule() {
                 Rule::element_name => {
-                    element_name = pair.as_span().as_str().to_owned();
-                    html.push_str(&element_name);
+                    html.push(HtmlToken::ElementName {
+                        name: pair.as_span().as_str().to_string(),
+                    });
                 }
                 Rule::element_classes => {
-                    html.push_str(" class=\"");
-
-                    let mut seperator_needed = false;
+                    let mut classes: Vec<String> = Vec::new();
 
                     for class_pair in pair.into_inner() {
                         if class_pair.as_rule() != Rule::element_class_name {
                             return Err(anyhow!("Unexpected element_classes rule"));
                         }
 
-                        if seperator_needed {
-                            html.push(' ');
-                        }
-
-                        html.push_str(class_pair.as_span().as_str());
-                        seperator_needed = true;
+                        classes.push(class_pair.as_span().as_str().to_string());
                     }
-                    html.push('"');
+
+                    html.push(HtmlToken::ElementClasses { classes });
                 }
                 Rule::element_attributes => {
+                    let mut attributes: HashMap<String, String> = HashMap::new();
+
                     for attribute_pair in pair.into_inner() {
                         if attribute_pair.as_rule() != Rule::element_attribute {
                             return Err(anyhow!("Unexpected element_attributes rule"));
@@ -223,35 +281,29 @@ impl DocumentParser {
                             return Err(anyhow!("Attribute pairs out of order"));
                         }
 
-                        html.push(' ');
-                        html.push_str(attribute_key_pair.as_span().as_str());
-                        html.push_str("=\"");
-                        html.push_str(
-                            &attribute_value_pair
+                        attributes.insert(
+                            attribute_key_pair.as_span().as_str().to_string(),
+                            attribute_value_pair
                                 .as_span()
                                 .as_str()
                                 .replace("\\\"", "&quot;"),
                         );
-                        html.push('"');
                     }
+
+                    html.push(HtmlToken::ElementAttributes { attributes });
                 }
                 Rule::element_content => {
-                    let content = pair.as_span().as_str();
-                    html.push_str(&format!(">{}</{}>", content, &element_name));
-                    element_closed = true;
+                    html.push(HtmlToken::ElementInlineContent {
+                        content: pair.as_span().as_str().to_string(),
+                    });
                 }
                 Rule::children => {
-                    html.push('>');
-                    html.push_str(&Self::generate_html_children(pair.into_inner())?);
-                    html.push_str(&format!("</{}>", &element_name));
-                    element_closed = true;
+                    html.push(HtmlToken::ElementChildren {
+                        children: Self::lex_html_children(pair.into_inner())?,
+                    });
                 }
                 _ => return Err(anyhow!(format!("Unexpected element rule: {:?}", pair))),
             }
-        }
-
-        if !element_closed {
-            html.push('>');
         }
 
         Ok(html)

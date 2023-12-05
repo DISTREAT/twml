@@ -32,6 +32,9 @@ fn main() -> Result<()> {
     let html = parser::DocumentParser::generate_html(&declarations, pairs)
         .context("Failed to generate html code")?;
 
+    #[cfg(debug_assertions)]
+    println!("html: {}", html);
+
     let temporary_dir = tempdir().context("Failed to create a temporary directory")?;
     let index_path = setup_rendering_env(&declarations, temporary_dir.path(), &html)?;
     export_pdf(&declarations, &index_path, &arguments[2])?;
