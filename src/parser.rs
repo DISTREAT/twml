@@ -142,6 +142,10 @@ impl DocumentParser {
         for token in tokens {
             match token {
                 HtmlToken::ElementName { name } => {
+                    if element_unclosed {
+                        html.push('>');
+                    }
+
                     html.push_str(&format!("<{}", name));
 
                     element_name = name;
