@@ -62,6 +62,14 @@ Although designed for websites, TailwindCSS is simple and flexible, making it pe
 
 _TWML converts documents to PDF using [rust-headless-chrome](https://github.com/rust-headless-chrome/rust-headless-chrome)._
 
+## Installation
+
+The master (development) version may be installed via cargo:
+
+```
+cargo install --git https://github.com/DISTREAT/twml
+```
+
 ## Reference
 
 _All tailwind classes can be found at [tailwindcss.com](https://tailwindcss.com/docs)._
