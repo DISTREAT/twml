@@ -110,7 +110,7 @@ impl DocumentParser {
             <html>
             <head>
               <style>
-                * { margin: 0; }
+                * {{ margin: 0; }}
                 .page {{ width: {}mm; height: {}mm; }}
                 {}
               </style>
