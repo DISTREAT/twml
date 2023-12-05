@@ -180,6 +180,7 @@ impl DocumentParser {
     fn generate_html_element(element_pair: Pair<Rule>) -> Result<String> {
         let mut html = String::from("<");
         let mut element_name = String::new();
+        let mut element_closed = false;
 
         for pair in element_pair.into_inner() {
             match pair.as_rule() {
@@ -236,15 +237,21 @@ impl DocumentParser {
                 }
                 Rule::element_content => {
                     let content = pair.as_span().as_str();
-                    html.push_str(&format!(">{}</{}>", content, &element_name))
+                    html.push_str(&format!(">{}</{}>", content, &element_name));
+                    element_closed = true;
                 }
                 Rule::children => {
                     html.push('>');
                     html.push_str(&Self::generate_html_children(pair.into_inner())?);
-                    html.push_str(&format!("</{}>", &element_name))
+                    html.push_str(&format!("</{}>", &element_name));
+                    element_closed = true;
                 }
                 _ => return Err(anyhow!(format!("Unexpected element rule: {:?}", pair))),
             }
+        }
+
+        if !element_closed {
+            html.push('>');
         }
 
         Ok(html)
