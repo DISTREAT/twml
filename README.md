@@ -11,55 +11,102 @@ using [Railwind](https://github.com/pintariching/railwind).
 
 Although designed for websites, TailwindCSS is simple and flexible, making it perfect for documents.
 
+```
+\\ Simple letter example in TWML
+\\ Note: All personal data is computer generated
+
+\div.page.p-12.antialiased.font-sans
+    \div.flex
+        \p.text-2xl.m-0 Terry K Duenas
+        \div.flex-1.text-right
+            \span.text-sm
+                3328 Lakewood Drive
+                07002 Bayonne, New Jersey
+
+                Telephone 201-858-7329
+                E-Mail xxxxxxxxxxxxx@xxxxx.xxx
+
+    \div.pt-7
+        \p.text-xs.m-0 Terry K Duenas - 3328 Lakewood Drive - 07002 Bayonne, New Jersey
+        \span
+            Application
+            Billy W Vanover
+            387 Joy Lane
+            90071 Los Angeles, California
+
+    \div.pt-12
+        \p.text-sm.m-0 2023-12-05
+        \p.font-bold.m-0 Lorum Ipsum Example Text
+
+    \div.pt-7
+        \span
+            Dear Mr. Vanover,
+
+            The following paragraph is a carefully-selected example of Lorem Ipsum.
+
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque id diam
+            nec nibh rhoncus luctus at vel leo. Orci varius natoque penatibus et magnis
+            dis parturient montes, nascetur ridiculus mus. Quisque eleifend elit eget
+            ligula mattis tempor. Aenean laoreet libero sit amet dolor sollicitudin laoreet.
+            Nam diam nunc, dapibus pretium nunc eu, varius ullamcorper lorem. Phasellus
+            ultrices fringilla augue, ac placerat purus lacinia eget. Phasellus ultricies
+            mi sit amet magna pharetra, et volutpat erat dictum. Sed vel hendrerit ligula.
+
+            Respectfully,
+
+
+            Terry K Duenas
+```
+
+![Example Image](docs/example.png)
+
 _TWML converts documents to PDF using [rust-headless-chrome](https://github.com/rust-headless-chrome/rust-headless-chrome)._
-
-```
-\\ Example Document in TWML
-\div.page.p-14
-    \div.flex.h-1/5
-        \div.w-1/2
-            \p Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        \div.text-right
-            \p.font-bold Finance Department
-            \span
-                Donec rutrum consequat tortor sed elementum.
-                Phasellus viverra nulla a nisi cursus viverra.
-                In in massa at massa accumsan mattis.
-                In varius tortor odio, in posuere nunc sagittis vitae.
-
-    \p December 2023
-    \p.text-center.font-bold Duis accumsan accumsan augue in iaculis.
-    \span
-        Hello Human,
-
-        Suspendisse ut ullamcorper risus. Nam sed urna ut ligula vestibulum
-        venenatis nec quis ligula. Vestibulum ante ipsum primis in faucibus
-        orci luctus et ultrices posuere cubilia curae; Duis sit amet pulvinar
-        risus, at mollis ex. Nam eu tristique leo. Nulla interdum lorem nunc,
-        sit amet condimentum sem iaculis a. In lorem lectus, molestie eget
-        ligula nec, eleifend mattis purus. Praesent suscipit sem sed ante
-        tempor consectetur. Class aptent taciti sociosqu ad litora torquent
-        per conubia nostra, per inceptos himenaeos. Aenean vitae massa ut
-        augue blandit tempor. Integer vehicula nunc non ligula congue scelerisque.
-        Sed mattis et nulla venenatis luctus. Integer rutrum maximus tincidunt.
-
-        \p.font-bold Thank you for checking out TWML!
-
-\div.page.p-14
-    New page - Fresh start.
-```
 
 ## Reference
 
-| Description         | Example                                      | Note                                                                 |
-| ------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
-| Comments            | `\\ Comment`                                 | Multiline comments are not supported                                 |
-| Include file        | `@include file_path`                         | Top-level declaration; Make file accessible during rendering process |
-| Page size           | `@page-width size_in_mm` (or `@page-height`) | Top-level declaration                                                |
-| New page            | `\div.page`                                  | Builtin support for `page` class                                     |
-| Simple content      | `\p Simple content`                          |                                                                      |
-| Block content       | \p<br>`   `Block content                     |
-| TailwindCSS Classes | `\p.class1.class2`                           |                                                                      |
-| HTML Attributes     | `\p{key1="value" key2="value"}`              |
+_All tailwind classes can be found at [tailwindcss.com](https://tailwindcss.com/docs)._
 
-_This project was released within 2 days of creating it - odd behavior is to be expected._
+Adding an image:
+
+```
+@include image.png
+
+\img{src="image.png"}
+```
+
+Basic _Hello World_:
+
+```
+\p Hello World!
+\\ converted to <p>Hello World</p>
+```
+
+Simple document:
+
+```
+\p.font-3xl.font-semibold.underline Title
+\span
+    Content
+\\ converted to <p class="font-2xl underline">Title</p><span>Content</span>
+```
+
+Underlining text:
+
+```
+\\ This is still something I have to think about.
+\\ I consider simplifing this issue in the near future.
+\span.flex.space-x-1
+    \p This is so
+    \p.underline cool
+    \p !
+```
+
+Multiple pages:
+
+```
+\div.page
+    \p First page
+
+\div.page
+    \p Second page
+```
