@@ -116,3 +116,14 @@ Multiple pages:
 \div.page
     \p Second page
 ```
+
+Page size:
+
+```
+\\ millimeter
+@page-width 150
+@page-height 100
+
+\div.page
+    \p.m-0 Page 1/1 (150x100)
+```
