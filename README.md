@@ -103,7 +103,7 @@ Underlining text:
 ```
 \span
     This is so
-    \p.underline cool
+    \span.underline cool
     !
 ```
 
