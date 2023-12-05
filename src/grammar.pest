@@ -30,4 +30,4 @@ block_content_continue = _{ PEEK_ALL ~ ( block_content | element ) }
 
 comment = _{ "\\\\" ~ ( !NEWLINE ~ ANY )* }
 
-children = { PEEK_ALL ~ PUSH(indentation) ~ ( elements | block ) ~ DROP }
+children = { PEEK_ALL ~ PUSH(indentation) ~ block ~ DROP }
