@@ -18,6 +18,9 @@ anyhow = "1.0.75"
 dyn-fmt = "0.4.0"
 headless_chrome = { version = "1.0.8", features = ["fetch"] }
 indoc = "2.0.4"
+notify = "6.1.1"
+penguin = "0.1.8"
 pest = "2.7.5"
 pest_derive = "2.7.5"
 railwind = "0.1.5"
+tokio = { version = "1.34.0", features = ["macros", "rt", "rt-multi-thread"] }
