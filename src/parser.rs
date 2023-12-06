@@ -111,7 +111,7 @@ impl DocumentParser {
             <head>
               <style>
                 * {{ margin: 0; }}
-                .page {{ width: {}mm; height: {}mm; }}
+                .page {{ width: {}mm; height: {}mm; overflow: hidden; }}
                 {}
               </style>
             </head>
