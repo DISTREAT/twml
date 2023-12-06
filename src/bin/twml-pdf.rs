@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use headless_chrome::browser::LaunchOptions;
 use headless_chrome::types::PrintToPdfOptions;
 use headless_chrome::Browser;
-use parser::Rule;
 use pest::Parser;
 use std::env;
 use std::fs;
@@ -10,8 +9,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 use tempfile::tempdir;
-
-mod parser;
+use twml::parser::{Declarations, DocumentParser, Rule};
 
 const FACTOR_MM_TO_INCHES: f64 = 25.4;
 
@@ -25,15 +23,12 @@ fn main() -> Result<()> {
 
     let document =
         fs::read_to_string(&arguments[1]).context("Failed to read the input document")?;
-    let pairs = parser::DocumentParser::parse(Rule::document, &document)
+    let pairs = DocumentParser::parse(Rule::document, &document)
         .context("Failed to interpret the provided document")?;
-    let declarations = parser::DocumentParser::get_declarations(pairs.clone())
+    let declarations = DocumentParser::get_declarations(pairs.clone())
         .context("Failed to parse the declarations")?;
-    let html = parser::DocumentParser::generate_html(&declarations, pairs)
+    let html = DocumentParser::generate_html(&declarations, pairs)
         .context("Failed to generate html code")?;
-
-    #[cfg(debug_assertions)]
-    println!("html: {}", html);
 
     let temporary_dir = tempdir().context("Failed to create a temporary directory")?;
     let index_path = setup_rendering_env(&declarations, temporary_dir.path(), &html)?;
@@ -43,7 +38,7 @@ fn main() -> Result<()> {
 }
 
 fn setup_rendering_env(
-    declarations: &parser::Declarations,
+    declarations: &Declarations,
     temporary_dir: &Path,
     html: &str,
 ) -> Result<String> {
@@ -62,11 +57,7 @@ fn setup_rendering_env(
     Ok(index_path.display().to_string())
 }
 
-fn export_pdf(
-    declarations: &parser::Declarations,
-    index_path: &str,
-    output_pdf_path: &str,
-) -> Result<()> {
+fn export_pdf(declarations: &Declarations, index_path: &str, output_pdf_path: &str) -> Result<()> {
     let browser = Browser::new(LaunchOptions::default())
         .context("Failed to initialize a headless_chrome Browser instance")?;
     let tab = browser.new_tab()?;
