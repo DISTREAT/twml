@@ -8,7 +8,7 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::process::exit;
-use tempfile::tempdir;
+use std::time::{SystemTime, UNIX_EPOCH};
 use twml::parser::{Declarations, DocumentParser, Rule};
 
 const FACTOR_MM_TO_INCHES: f64 = 25.4;
@@ -30,9 +30,14 @@ fn main() -> Result<()> {
     let html = DocumentParser::generate_html(&declarations, pairs)
         .context("Failed to generate html code")?;
 
-    let temporary_dir = tempdir().context("Failed to create a temporary directory")?;
-    let index_path = setup_rendering_env(&declarations, temporary_dir.path(), &html)?;
+    let time = SystemTime::now().duration_since(UNIX_EPOCH)?.subsec_nanos();
+    let temporary_dir_path = env::temp_dir().join(format!("twml-live-{}", time));
+    fs::create_dir(&temporary_dir_path).context("Failed to create a temporary directory")?;
+
+    let index_path = setup_rendering_env(&declarations, &temporary_dir_path, &html)?;
     export_pdf(&declarations, &index_path, &arguments[2])?;
+
+    fs::remove_dir_all(&temporary_dir_path).context("Failed to clean up temporary directory")?;
 
     Ok(())
 }
