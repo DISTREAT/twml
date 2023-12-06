@@ -70,6 +70,19 @@ The master (development) version may be installed via cargo:
 cargo install --git https://github.com/DISTREAT/twml
 ```
 
+## Usage
+
+```
+# pdf
+twml-pdf input.twml output.pdf
+
+# html
+twml-html input.twml output.html
+
+# live rendering via web server
+twml-live document.twml
+```
+
 ## Reference
 
 _All tailwind classes can be found at [tailwindcss.com](https://tailwindcss.com/docs)._
