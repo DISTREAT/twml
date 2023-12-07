@@ -5,6 +5,7 @@ use pest::Parser;
 use std::env;
 use std::fs;
 use std::io::Write;
+use std::path::Path;
 use std::process::exit;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -25,6 +26,7 @@ async fn main() -> Result<()> {
 
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.subsec_nanos();
     let temporary_dir_path = env::temp_dir().join(format!("twml-live-{}", time));
+    let temporary_dir_path_drop_copy = temporary_dir_path.clone();
     fs::create_dir(&temporary_dir_path).context("Failed to create a temporary directory")?;
 
     let index_path = temporary_dir_path.join("index.html");
@@ -60,6 +62,14 @@ async fn main() -> Result<()> {
                             let _ = index_file.set_len(0);
                             write!(index_file, "{}", html).unwrap();
 
+                            for file in &declarations.include {
+                                fs::copy(
+                                    file,
+                                    &temporary_dir_path.join(Path::new(file).file_name().unwrap()),
+                                )
+                                .unwrap_or_else(|_| panic!("Failed to include '{}'", file));
+                            }
+
                             controller.reload();
                         }
                         Err(error) => {
@@ -76,7 +86,8 @@ async fn main() -> Result<()> {
 
     server.await?;
 
-    fs::remove_dir_all(&temporary_dir_path).context("Failed to clean up temporary directory")?;
+    fs::remove_dir_all(&temporary_dir_path_drop_copy)
+        .context("Failed to clean up temporary directory")?;
 
     Ok(())
 }
