@@ -88,59 +88,71 @@ impl DocumentParser {
 
     pub fn generate_html(declarations: &Declarations, pairs: Pairs<Rule>) -> Result<String> {
         let html_tokens = Self::lex_html_document(pairs)?;
-        let html_body = Self::generate_html_body(&html_tokens, false)?;
+        let html_body = Self::generate_html_body(&html_tokens, 4, false, "")?;
 
         let mut warnings: Vec<railwind::warning::Warning> = Vec::new();
         let generated_css = railwind::parse_to_string(
             railwind::Source::String(html_body.clone(), railwind::CollectionOptions::Html),
             false,
             &mut warnings,
-        )
-        .replace('\n', "")
-        .replace("    ", "");
+        );
 
         let html = indoc! {"
             <!DOCTYPE html>
             <html>
-            <head>
-              <style>
-                * {{ margin: 0; }}
-                .page {{ width: {}mm; height: {}mm; overflow: hidden; }}
-                {}
-              </style>
-            </head>
-            <body>
-              {}
-            </body>
+              <head>
+                <style>
+                  * {{
+                    margin: 0;
+                  }}
+
+                  .page {{
+                    width: {}mm;
+                    height: {}mm;
+                    overflow: hidden;
+                  }}
+
+                  {}
+                </style>
+              </head>
+              <body>{}
+              </body>
             </html>
         "}
-        .replace('\n', "")
-        .replace("  ", "")
         .format(&[
             // default: A4
             declarations.page_width_mm.unwrap_or(210).to_string(),
             declarations.page_height_mm.unwrap_or(297).to_string(),
-            generated_css,
+            generated_css
+                .replace("\n\n", "\n\n      ")
+                .replace(";\n", ";\n    ")
+                .replace("{\n", "{\n    ")
+                .replace('}', "  }"),
             html_body,
         ]);
 
         Ok(html)
     }
 
-    fn generate_html_body(tokens: &Vec<HtmlToken>, children: bool) -> Result<String> {
+    fn generate_html_body(
+        tokens: &Vec<HtmlToken>,
+        indentation: usize,
+        children: bool,
+        element_name: &str,
+    ) -> Result<String> {
         let mut html = String::new();
-        let mut element_name = "";
         let mut element_unclosed = false;
+        let mut element_name = element_name;
         let mut following_block_line = false;
 
         for token in tokens {
             match token {
                 HtmlToken::ElementName { name } => {
                     if element_unclosed {
-                        html.push_str("/>");
+                        html.push_str(" />");
                     }
 
-                    html.push_str(&format!("<{}", name));
+                    html.push_str(&format!("\n{}<{}", " ".repeat(indentation), name));
 
                     element_name = name;
                     element_unclosed = true;
@@ -161,26 +173,36 @@ impl DocumentParser {
                 }
                 HtmlToken::ElementChildren { children } => {
                     html.push('>');
-                    html.push_str(&Self::generate_html_body(children, true)?);
-                    html.push_str(&format!("</{}>", element_name));
+                    html.push_str(&Self::generate_html_body(
+                        children,
+                        indentation + 2,
+                        true,
+                        element_name,
+                    )?);
+                    html.push_str(&format!("\n{}</{}>", " ".repeat(indentation), element_name));
 
                     element_unclosed = false;
                 }
                 HtmlToken::BlockLine { content } => {
                     if following_block_line {
-                        html.push_str("<br/>");
+                        html.push_str("<br />");
+                    } else {
+                        following_block_line = true;
                     }
-                    html.push_str(content);
 
-                    following_block_line = true;
+                    html.push('\n');
+                    html.push_str(&" ".repeat(indentation));
+                    html.push_str(content);
                 }
-                HtmlToken::EmptyBlockLine => html.push_str("<br/>"),
-                // _ => return Err(anyhow!(format!("Unexpected html token: {:?}", token))),
+                HtmlToken::EmptyBlockLine => {
+                    html.push_str("<br />");
+                    html.push('\n')
+                } // _ => return Err(anyhow!(format!("Unexpected html token: {:?}", token))),
             }
         }
 
         if element_unclosed && !children {
-            html.push_str("/>");
+            html.push_str(" />");
         }
 
         Ok(html)
