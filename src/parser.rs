@@ -184,18 +184,25 @@ impl DocumentParser {
                     element_unclosed = false;
                 }
                 HtmlToken::BlockLine { content } => {
-                    if following_block_line {
+                    if following_block_line && element_name != "pre" {
                         html.push_str("<br />");
                     } else {
                         following_block_line = true;
                     }
 
                     html.push('\n');
-                    html.push_str(&" ".repeat(indentation));
+
+                    if element_name != "pre" {
+                        html.push_str(&" ".repeat(indentation));
+                    }
+
                     html.push_str(content);
                 }
                 HtmlToken::EmptyBlockLine => {
-                    html.push_str("<br />");
+                    if element_name != "pre" {
+                        html.push_str("<br />");
+                    }
+
                     html.push('\n')
                 } // _ => return Err(anyhow!(format!("Unexpected html token: {:?}", token))),
             }
