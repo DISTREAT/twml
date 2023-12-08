@@ -1,33 +1,30 @@
-whitespace = _{ " "+ }
-indentation = _{ ( " " | "\t" )+ }
+COMMENT = _{ "\\\\" ~ ( !NEWLINE ~ ANY )* }
+WHITESPACE = _{ NEWLINE+ }
+INDENTATION = _{ ( " " | "\t" )+ }
 
-document = ${ NEWLINE* ~ comment* ~ NEWLINE* ~ declarations? ~ NEWLINE* ~ elements ~ NEWLINE* ~ EOI }
+tailwind_class = _{ ASCII_ALPHANUMERIC+ ~ ( "-" | "/" | "[" | "]" | ASCII_ALPHANUMERIC+ )* }
 
-declarations = { declaration ~ ( NEWLINE+ ~ declaration )* }
-declaration = { "@" ~ declaration_key ~ whitespace+ ~ declaration_value }
-declaration_key = { ( !whitespace ~ ANY )* }
+attributes = _{ "{" ~ " "* ~ attribute ~ ( " "+ ~ attribute )* ~ " "* ~ "}" }
+attribute = { attribute_key ~ "=" ~ "\"" ~ attribute_value ~ "\"" }
+attribute_key = { ASCII_ALPHA+ }
+attribute_value = { ( ( !( "\\" | "\"" ) ~ ANY ) | "\\\"" )* }
+
+document = { COMMENT* ~ declaration* ~ block* ~ EOI }
+
+declaration = ${ "@" ~ declaration_key ~ " "+ ~ declaration_value ~ NEWLINE }
+declaration_key = { ( !" " ~ ANY)* }
 declaration_value = { ( !NEWLINE ~ ANY )* }
 
-element = { "\\" ~ element_name ~ element_classes? ~ element_attributes? ~ (whitespace ~ element_content)? ~ ( NEWLINE+ ~ children )? }
-element_name = { ASCII_ALPHA_LOWER+ }
-element_content = { (!NEWLINE ~ ANY)+ }
-element_classes = { ("." ~ element_class_name)+ }
-element_class_name = { ASCII_ALPHANUMERIC+ ~ ( "-" | "/" | "[" | "]" | ASCII_ALPHANUMERIC+ )* }
-element_attributes = { "{" ~ whitespace* ~ element_attribute ~ ( " "+ ~ element_attribute )* ~ whitespace* ~ "}" }
-element_attribute = { element_attribute_key ~ "=" ~ "\"" ~ element_attribute_value ~ "\"" }
-element_attribute_key = { ASCII_ALPHA+ }
-element_attribute_value = { ( ( !( "\\" | "\"" ) ~ ANY ) | "\\\"" )* }
+block = @{ block_rules ~ ( NEWLINE ~ block_content_empty_line* ~ PEEK_ALL ~ block_rules )* }
+block_rules = { block_element | COMMENT | block_content_line }
+block_content_line = ${ ( !NEWLINE ~ ANY )+ }
+block_content_empty_line = ${ NEWLINE }
 
-elements = _{ element_first ~ ( NEWLINE+ ~ element_continue )* }
-element_first = _{ ( element | comment ) }
-element_continue = _{ PEEK_ALL ~ ( element | comment ) }
+block_children = { PEEK_ALL ~ PUSH(INDENTATION) ~ block ~ DROP }
 
-block = { block_content_first ~ ( NEWLINE ~ block_newline* ~ block_content_continue )* }
-block_newline = { NEWLINE }
-block_content = { ( !( NEWLINE | element ) ~ ANY )+ }
-block_content_first = _{ ( block_content | element ) }
-block_content_continue = _{ PEEK_ALL ~ ( block_content | element ) }
-
-comment = _{ "\\\\" ~ ( !NEWLINE ~ ANY )* }
-
-children = { PEEK_ALL ~ PUSH(indentation) ~ block ~ DROP }
+block_element = ${ "\\" ~ block_element_name ~ block_element_classes? ~ block_element_attributes? ~ ( (" " ~ block_element_content) | ( NEWLINE ~ block_children ) )? }
+block_element_name = { ASCII_ALPHA_LOWER+ }
+block_element_classes = { ("." ~ block_element_class)+ }
+block_element_class = { tailwind_class }
+block_element_attributes = { attributes }
+block_element_content = { (!NEWLINE ~ ANY)+ }

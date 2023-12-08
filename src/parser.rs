@@ -35,52 +35,46 @@ impl DocumentParser {
 
         for pair in pairs.next().unwrap().into_inner() {
             match pair.as_rule() {
-                Rule::element => {}
-                Rule::EOI => {}
-                Rule::declarations => {
-                    for declaration_pair in pair.into_inner() {
-                        if declaration_pair.as_rule() != Rule::declaration {
-                            return Err(anyhow!("Unexpected declarations rule"));
+                Rule::declaration => {
+                    let mut iterator = pair.into_inner();
+                    let declaration_key_pair = iterator.next().unwrap();
+                    let declaration_value_pair = iterator.next().unwrap();
+
+                    if declaration_key_pair.as_rule() != Rule::declaration_key
+                        || declaration_value_pair.as_rule() != Rule::declaration_value
+                    {
+                        return Err(anyhow!("Declaration pairs out of order"));
+                    }
+
+                    let declaration_key = declaration_key_pair.as_span().as_str();
+                    let declaration_value = declaration_value_pair.as_span().as_str();
+
+                    match declaration_key {
+                        "include" => include.push(declaration_value.to_string()),
+                        "page-width" => {
+                            page_width_mm = Some(
+                                declaration_value
+                                    .parse::<u64>()
+                                    .context("The page-width value is not of u64 value")?,
+                            )
                         }
-
-                        let mut iterator = declaration_pair.into_inner();
-                        let declaration_key_pair = iterator.next().unwrap();
-                        let declaration_value_pair = iterator.next().unwrap();
-
-                        if declaration_key_pair.as_rule() != Rule::declaration_key
-                            || declaration_value_pair.as_rule() != Rule::declaration_value
-                        {
-                            return Err(anyhow!("Declaration pairs out of order"));
+                        "page-height" => {
+                            page_height_mm = Some(
+                                declaration_value
+                                    .parse::<u64>()
+                                    .context("The page-height value is not of u64 value")?,
+                            )
                         }
-
-                        let declaration_key = declaration_key_pair.as_span().as_str();
-                        let declaration_value = declaration_value_pair.as_span().as_str();
-
-                        match declaration_key {
-                            "include" => include.push(declaration_value.to_string()),
-                            "page-width" => {
-                                page_width_mm = Some(
-                                    declaration_value
-                                        .parse::<u64>()
-                                        .context("The page-width value is not of u64 value")?,
-                                )
-                            }
-                            "page-height" => {
-                                page_height_mm = Some(
-                                    declaration_value
-                                        .parse::<u64>()
-                                        .context("The page-height value is not of u64 value")?,
-                                )
-                            }
-                            _ => {
-                                return Err(anyhow!(format!(
-                                    "The declaration key '{}' is unexpected",
-                                    declaration_key
-                                )))
-                            }
+                        _ => {
+                            return Err(anyhow!(format!(
+                                "The declaration key '{}' is unexpected",
+                                declaration_key
+                            )))
                         }
                     }
                 }
+                Rule::block => {}
+                Rule::EOI => {}
                 _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
             }
         }
@@ -143,7 +137,7 @@ impl DocumentParser {
             match token {
                 HtmlToken::ElementName { name } => {
                     if element_unclosed {
-                        html.push('>');
+                        html.push_str("/>");
                     }
 
                     html.push_str(&format!("<{}", name));
@@ -174,19 +168,19 @@ impl DocumentParser {
                 }
                 HtmlToken::BlockLine { content } => {
                     if following_block_line {
-                        html.push_str("<br>");
+                        html.push_str("<br/>");
                     }
                     html.push_str(content);
 
                     following_block_line = true;
                 }
-                HtmlToken::EmptyBlockLine => html.push_str("<br>"),
+                HtmlToken::EmptyBlockLine => html.push_str("<br/>"),
                 // _ => return Err(anyhow!(format!("Unexpected html token: {:?}", token))),
             }
         }
 
         if element_unclosed && !children {
-            html.push('>');
+            html.push_str("/>");
         }
 
         Ok(html)
@@ -197,9 +191,9 @@ impl DocumentParser {
 
         for pair in pairs.next().unwrap().into_inner() {
             match pair.as_rule() {
-                Rule::element => html.extend(Self::lex_html_element(pair)?),
+                Rule::block => html.extend(Self::lex_html_block(pair.into_inner())?),
+                Rule::declaration => {}
                 Rule::EOI => {}
-                Rule::declarations => {}
                 _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
             }
         }
@@ -207,59 +201,60 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_children(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs {
             match pair.as_rule() {
-                Rule::block => {
-                    for class_pair in pair.into_inner() {
-                        match class_pair.as_rule() {
-                            Rule::block_content => {
-                                html.push(HtmlToken::BlockLine {
-                                    content: class_pair.as_span().as_str().to_string(),
-                                });
-                            }
-                            Rule::block_newline => {
-                                html.push(HtmlToken::EmptyBlockLine);
-                            }
-                            Rule::element => {
-                                html.extend(Self::lex_html_element(class_pair)?);
-                            }
-                            _ => {
-                                return Err(anyhow!(format!(
-                                    "Unexpected block rule: {:?}",
-                                    class_pair
-                                )))
-                            }
-                        }
-                    }
+                Rule::block_element => html.extend(Self::lex_html_block_element(pair)?),
+                Rule::block_content_line => {
+                    html.push(HtmlToken::BlockLine {
+                        content: pair.as_span().as_str().to_string(),
+                    });
                 }
-                Rule::element => {
-                    html.extend(Self::lex_html_element(pair)?);
+                Rule::block_content_empty_line => {
+                    html.push(HtmlToken::EmptyBlockLine);
                 }
-                _ => return Err(anyhow!(format!("Unexpected children rule: {:?}", pair))),
+                _ => return Err(anyhow!(format!("Unexpected block rule: {:?}", pair))),
             }
         }
 
         Ok(html)
     }
 
-    fn lex_html_element(element_pair: Pair<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block_children(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+        let mut html: Vec<HtmlToken> = Vec::new();
+
+        for pair in pairs {
+            match pair.as_rule() {
+                Rule::block => html.extend(Self::lex_html_block(pair.into_inner())?),
+                _ => {
+                    return Err(anyhow!(format!(
+                        "Unexpected block children rule: {:?}",
+                        pair
+                    )))
+                }
+            }
+        }
+
+        Ok(html)
+    }
+
+    fn lex_html_block_element(element_pair: Pair<Rule>) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in element_pair.into_inner() {
             match pair.as_rule() {
-                Rule::element_name => {
+                Rule::block_element_name => {
                     html.push(HtmlToken::ElementName {
                         name: pair.as_span().as_str().to_string(),
                     });
                 }
-                Rule::element_classes => {
+                Rule::block_element_classes => {
                     let mut classes: Vec<String> = Vec::new();
 
                     for class_pair in pair.into_inner() {
-                        if class_pair.as_rule() != Rule::element_class_name {
+                        if class_pair.as_rule() != Rule::block_element_class {
                             return Err(anyhow!("Unexpected element_classes rule"));
                         }
 
@@ -268,20 +263,20 @@ impl DocumentParser {
 
                     html.push(HtmlToken::ElementClasses { classes });
                 }
-                Rule::element_attributes => {
+                Rule::block_element_attributes => {
                     let mut attributes: HashMap<String, String> = HashMap::new();
 
                     for attribute_pair in pair.into_inner() {
-                        if attribute_pair.as_rule() != Rule::element_attribute {
-                            return Err(anyhow!("Unexpected element_attributes rule"));
+                        if attribute_pair.as_rule() != Rule::attribute {
+                            return Err(anyhow!("Unexpected block_element_attributes rule"));
                         }
 
                         let mut iterator = attribute_pair.into_inner();
                         let attribute_key_pair = iterator.next().unwrap();
                         let attribute_value_pair = iterator.next().unwrap();
 
-                        if attribute_key_pair.as_rule() != Rule::element_attribute_key
-                            || attribute_value_pair.as_rule() != Rule::element_attribute_value
+                        if attribute_key_pair.as_rule() != Rule::attribute_key
+                            || attribute_value_pair.as_rule() != Rule::attribute_value
                         {
                             return Err(anyhow!("Attribute pairs out of order"));
                         }
@@ -297,17 +292,22 @@ impl DocumentParser {
 
                     html.push(HtmlToken::ElementAttributes { attributes });
                 }
-                Rule::element_content => {
+                Rule::block_element_content => {
                     html.push(HtmlToken::ElementInlineContent {
                         content: pair.as_span().as_str().to_string(),
                     });
                 }
-                Rule::children => {
+                Rule::block_children => {
                     html.push(HtmlToken::ElementChildren {
-                        children: Self::lex_html_children(pair.into_inner())?,
+                        children: Self::lex_html_block_children(pair.into_inner())?,
                     });
                 }
-                _ => return Err(anyhow!(format!("Unexpected element rule: {:?}", pair))),
+                _ => {
+                    return Err(anyhow!(format!(
+                        "Unexpected block element rule: {:?}",
+                        pair
+                    )))
+                }
             }
         }
 
