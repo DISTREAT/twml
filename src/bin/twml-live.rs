@@ -5,7 +5,6 @@ use pest::Parser;
 use std::env;
 use std::fs;
 use std::io::Write;
-use std::path::Path;
 use std::process::exit;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -62,13 +61,11 @@ async fn main() -> Result<()> {
                             let _ = index_file.set_len(0);
                             write!(index_file, "{}", html).unwrap();
 
-                            for file in &declarations.include {
-                                fs::copy(
-                                    file,
-                                    &temporary_dir_path.join(Path::new(file).file_name().unwrap()),
-                                )
-                                .unwrap_or_else(|_| panic!("Failed to include '{}'", file));
-                            }
+                            DocumentParser::include_linked_files(
+                                &declarations,
+                                &temporary_dir_path,
+                            )
+                            .expect("Failed to include linked files");
 
                             controller.reload();
                         }

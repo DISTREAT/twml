@@ -1,9 +1,13 @@
 use anyhow::{anyhow, Context, Result};
 use dyn_fmt::AsStrFormatExt;
+use font_kit::loaders::freetype::Font;
+use font_kit::source::SystemSource;
 use indoc::indoc;
 use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -14,6 +18,7 @@ pub struct Declarations {
     pub include: Vec<String>,
     pub js: Vec<String>,
     pub css: Vec<String>,
+    pub fonts: Vec<Font>,
     pub page_width_mm: Option<u64>,
     pub page_height_mm: Option<u64>,
 }
@@ -34,6 +39,7 @@ impl DocumentParser {
         let mut include: Vec<String> = Vec::new();
         let mut js: Vec<String> = Vec::new();
         let mut css: Vec<String> = Vec::new();
+        let mut fonts: Vec<Font> = Vec::new();
         let mut page_width_mm: Option<u64> = None;
         let mut page_height_mm: Option<u64> = None;
 
@@ -69,6 +75,14 @@ impl DocumentParser {
                                     .context("The page-height value is not of u64 value")?,
                             )
                         }
+                        "font" => {
+                            fonts.push(
+                                SystemSource::new()
+                                    .select_by_postscript_name(declaration_value)
+                                    .context("Could not find the selected font")?
+                                    .load()?,
+                            );
+                        }
                         "js" => js.push(declaration_value.to_string()),
                         "css" => css.push(declaration_value.to_string()),
                         _ => {
@@ -89,9 +103,44 @@ impl DocumentParser {
             include,
             js,
             css,
+            fonts,
             page_width_mm,
             page_height_mm,
         })
+    }
+
+    pub fn include_linked_files(declarations: &Declarations, temporary_dir: &Path) -> Result<()> {
+        for file in &declarations.include {
+            fs::copy(
+                file,
+                &temporary_dir.join(Path::new(file).file_name().unwrap()),
+            )
+            .context(format!("Failed to include '{}'", file))?;
+        }
+
+        if !temporary_dir.join("fonts").exists() {
+            fs::create_dir(temporary_dir.join("fonts"))
+                .context("Failed to create directory fonts")?;
+        }
+
+        for font in &declarations.fonts {
+            fs::write(
+                &temporary_dir.join(format!(
+                    "fonts/{}",
+                    font.postscript_name()
+                        .unwrap()
+                        .replace(' ', "-")
+                        .to_lowercase()
+                )),
+                font.copy_font_data().unwrap().as_ref(),
+            )
+            .context(format!(
+                "Failed to add font '{}'",
+                font.postscript_name().unwrap()
+            ))?;
+        }
+
+        Ok(())
     }
 
     pub fn generate_html(declarations: &Declarations, pairs: Pairs<Rule>) -> Result<String> {
@@ -120,6 +169,7 @@ impl DocumentParser {
                     overflow: hidden;
                   }}
                   {}
+                  {}
                 </style>
                 {}
               </head>
@@ -132,6 +182,17 @@ impl DocumentParser {
             // default: A4
             declarations.page_width_mm.unwrap_or(210).to_string(),
             declarations.page_height_mm.unwrap_or(297).to_string(),
+            declarations
+                .fonts
+                .iter()
+                .map(|font| {
+                    format!(
+                        "@font-face {{ font-family: {0}; src: url(fonts/{0}); }} .font-{0} {{ font-family: {0}; }}",
+                        font.postscript_name().unwrap().replace(' ', "-").to_lowercase()
+                    )
+                })
+                .intersperse(String::from("\n      "))
+                .collect(),
             generated_css
                 .replace("\n\n", "\n\n      ")
                 .replace(";\n", ";\n    ")

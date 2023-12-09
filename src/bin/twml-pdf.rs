@@ -51,13 +51,7 @@ fn setup_rendering_env(
     let mut index_file = fs::File::create(&index_path)?;
     write!(index_file, "{}", html)?;
 
-    for file in &declarations.include {
-        fs::copy(
-            file,
-            &temporary_dir.join(Path::new(file).file_name().unwrap()),
-        )
-        .context(format!("Failed to include '{}'", file))?;
-    }
+    DocumentParser::include_linked_files(declarations, temporary_dir)?;
 
     Ok(index_path.display().to_string())
 }
