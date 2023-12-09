@@ -12,6 +12,8 @@ pub struct DocumentParser;
 #[derive(Debug)]
 pub struct Declarations {
     pub include: Vec<String>,
+    pub js: Vec<String>,
+    pub css: Vec<String>,
     pub page_width_mm: Option<u64>,
     pub page_height_mm: Option<u64>,
 }
@@ -30,6 +32,8 @@ enum HtmlToken {
 impl DocumentParser {
     pub fn get_declarations(mut pairs: Pairs<Rule>) -> Result<Declarations> {
         let mut include: Vec<String> = Vec::new();
+        let mut js: Vec<String> = Vec::new();
+        let mut css: Vec<String> = Vec::new();
         let mut page_width_mm: Option<u64> = None;
         let mut page_height_mm: Option<u64> = None;
 
@@ -65,6 +69,8 @@ impl DocumentParser {
                                     .context("The page-height value is not of u64 value")?,
                             )
                         }
+                        "js" => js.push(declaration_value.to_string()),
+                        "css" => css.push(declaration_value.to_string()),
                         _ => {
                             return Err(anyhow!(format!(
                                 "The declaration key '{}' is unexpected",
@@ -81,6 +87,8 @@ impl DocumentParser {
 
         Ok(Declarations {
             include,
+            js,
+            css,
             page_width_mm,
             page_height_mm,
         })
@@ -111,11 +119,12 @@ impl DocumentParser {
                     height: {}mm;
                     overflow: hidden;
                   }}
-
                   {}
                 </style>
+                {}
               </head>
               <body>{}
+              {}
               </body>
             </html>
         "}
@@ -128,7 +137,19 @@ impl DocumentParser {
                 .replace(";\n", ";\n    ")
                 .replace("{\n", "{\n    ")
                 .replace('}', "  }"),
+            declarations
+                .css
+                .iter()
+                .map(|src| format!("<link rel=\"stylesheet\" href=\"{}\" />", src))
+                .intersperse(String::from("\n    "))
+                .collect(),
             html_body,
+            declarations
+                .js
+                .iter()
+                .map(|src| format!("<script src=\"{}\"></script>", src))
+                .intersperse(String::from("\n  "))
+                .collect(),
         ]);
 
         Ok(html)
