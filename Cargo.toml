@@ -16,6 +16,7 @@ name = "twml"
 [dependencies]
 anyhow = "1.0.75"
 dyn-fmt = "0.4.0"
+fancy-regex = "0.12.0"
 font-kit = "0.12.0"
 headless_chrome = { version = "1.0.8", features = ["fetch"] }
 indoc = "2.0.4"

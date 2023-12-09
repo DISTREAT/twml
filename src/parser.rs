@@ -1,13 +1,16 @@
 use anyhow::{anyhow, Context, Result};
 use dyn_fmt::AsStrFormatExt;
+use fancy_regex::Regex;
 use font_kit::loaders::freetype::Font;
 use font_kit::source::SystemSource;
 use indoc::indoc;
 use pest::iterators::{Pair, Pairs};
+use pest::Parser;
 use pest_derive::Parser;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -23,7 +26,7 @@ pub struct Declarations {
     pub page_height_mm: Option<u64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum HtmlToken {
     ElementName { name: String },
     ElementClasses { classes: Vec<String> },
@@ -32,6 +35,27 @@ enum HtmlToken {
     ElementChildren { children: Vec<HtmlToken> },
     EmptyBlockLine,
     BlockLine { content: String },
+}
+
+#[derive(Debug)]
+struct LexerState {
+    template_children: Option<Vec<HtmlToken>>,
+    template_classes: Option<Vec<String>>,
+    template_attributes: HashMap<String, String>,
+}
+
+fn replace_template_attributes(
+    content: &str,
+    attributes: &HashMap<String, String>,
+) -> Result<String> {
+    let mut content: String = content.to_string();
+
+    for (key, value) in attributes.iter() {
+        let regex = &Regex::new(&format!(r"(?!\}})\{{{}\}}(?!\}})", key))?;
+        content = regex.replace(&content, value).to_string();
+    }
+
+    Ok(content)
 }
 
 impl DocumentParser {
@@ -144,7 +168,14 @@ impl DocumentParser {
     }
 
     pub fn generate_html(declarations: &Declarations, pairs: Pairs<Rule>) -> Result<String> {
-        let html_tokens = Self::lex_html_document(pairs)?;
+        let html_tokens = Self::lex_html_document(
+            &LexerState {
+                template_children: None,
+                template_classes: None,
+                template_attributes: HashMap::new(),
+            },
+            pairs,
+        )?;
         let html_body = Self::generate_html_body(&html_tokens, 4, false, "")?;
 
         let mut warnings: Vec<railwind::warning::Warning> = Vec::new();
@@ -297,12 +328,12 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_document(mut pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_document(lex_state: &LexerState, mut pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs.next().unwrap().into_inner() {
             match pair.as_rule() {
-                Rule::block => html.extend(Self::lex_html_block(pair.into_inner())?),
+                Rule::block => html.extend(Self::lex_html_block(lex_state, pair.into_inner())?),
                 Rule::declaration => {}
                 Rule::EOI => {}
                 _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
@@ -312,15 +343,21 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_block(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block(lex_state: &LexerState, pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs {
             match pair.as_rule() {
-                Rule::block_element => html.extend(Self::lex_html_block_element(pair)?),
+                Rule::block_element => html.extend(Self::lex_html_block_element(lex_state, pair)?),
+                Rule::block_template => {
+                    html.extend(Self::lex_html_block_template(lex_state, pair)?)
+                }
                 Rule::block_content_line => {
                     html.push(HtmlToken::BlockLine {
-                        content: pair.as_span().as_str().to_string(),
+                        content: replace_template_attributes(
+                            pair.as_span().as_str(),
+                            &lex_state.template_attributes,
+                        )?,
                     });
                 }
                 Rule::block_content_empty_line => {
@@ -333,12 +370,16 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_block_children(pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block_children(
+        lex_state: &LexerState,
+        pairs: Pairs<Rule>,
+    ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs {
             match pair.as_rule() {
-                Rule::block => html.extend(Self::lex_html_block(pair.into_inner())?),
+                Rule::block => html.extend(Self::lex_html_block(lex_state, pair.into_inner())?),
+                Rule::ellipsis => html.extend(lex_state.template_children.clone().unwrap()),
                 _ => {
                     return Err(anyhow!(format!(
                         "Unexpected block children rule: {:?}",
@@ -351,7 +392,10 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_block_element(element_pair: Pair<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block_element(
+        lex_state: &LexerState,
+        element_pair: Pair<Rule>,
+    ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in element_pair.into_inner() {
@@ -365,11 +409,15 @@ impl DocumentParser {
                     let mut classes: Vec<String> = Vec::new();
 
                     for class_pair in pair.into_inner() {
-                        if class_pair.as_rule() != Rule::block_element_class {
-                            return Err(anyhow!("Unexpected element_classes rule"));
+                        match class_pair.as_rule() {
+                            Rule::block_element_class => {
+                                classes.push(class_pair.as_span().as_str().to_string())
+                            }
+                            Rule::extend_classes => {
+                                classes.extend(lex_state.template_classes.clone().unwrap())
+                            }
+                            _ => return Err(anyhow!("Unexpected element_classes rule")),
                         }
-
-                        classes.push(class_pair.as_span().as_str().to_string());
                     }
 
                     html.push(HtmlToken::ElementClasses { classes });
@@ -405,12 +453,15 @@ impl DocumentParser {
                 }
                 Rule::block_element_content => {
                     html.push(HtmlToken::ElementInlineContent {
-                        content: pair.as_span().as_str().to_string(),
+                        content: replace_template_attributes(
+                            pair.as_span().as_str(),
+                            &lex_state.template_attributes,
+                        )?,
                     });
                 }
                 Rule::block_children => {
                     html.push(HtmlToken::ElementChildren {
-                        children: Self::lex_html_block_children(pair.into_inner())?,
+                        children: Self::lex_html_block_children(lex_state, pair.into_inner())?,
                     });
                 }
                 _ => {
@@ -421,6 +472,123 @@ impl DocumentParser {
                 }
             }
         }
+
+        Ok(html)
+    }
+
+    fn lex_html_block_template(
+        lex_state: &LexerState,
+        template_pair: Pair<Rule>,
+    ) -> Result<Vec<HtmlToken>> {
+        let mut html: Vec<HtmlToken> = Vec::new();
+        let mut template_path = String::new();
+        let mut template_content = String::new();
+        let mut template_children: Vec<HtmlToken> = Vec::new();
+        let mut template_classes: Vec<String> = Vec::new();
+        let mut template_attributes: HashMap<String, String> = HashMap::new();
+
+        for pair in template_pair.into_inner() {
+            match pair.as_rule() {
+                Rule::block_template_name => {
+                    template_path = pair.as_span().as_str().replace('-', "/");
+                    let mut content: Option<String> = None;
+
+                    for directory in &[
+                        "./",
+                        "/usr/share/twml/templates/",
+                        "~/.config/twml/templates/",
+                    ] {
+                        content = fs::read_to_string(
+                            PathBuf::from(directory)
+                                .join(&template_path)
+                                .with_extension("twml"),
+                        )
+                        .ok();
+
+                        if content.is_some() {
+                            break;
+                        }
+                    }
+
+                    if content.is_none() {
+                        return Err(anyhow!(format!(
+                            "Failed to read template '{}'",
+                            template_path
+                        )));
+                    }
+
+                    template_content = content.unwrap();
+                }
+                Rule::block_template_classes => {
+                    for class_pair in pair.into_inner() {
+                        match class_pair.as_rule() {
+                            Rule::block_template_class => {
+                                template_classes.push(class_pair.as_span().as_str().to_string());
+                            }
+                            Rule::extend_classes => {
+                                template_classes.extend(lex_state.template_classes.clone().unwrap())
+                            }
+                            _ => return Err(anyhow!("Unexpected template_classes rule")),
+                        }
+                    }
+                }
+                Rule::block_template_attributes => {
+                    for attribute_pair in pair.into_inner() {
+                        if attribute_pair.as_rule() != Rule::attribute {
+                            return Err(anyhow!("Unexpected block_template_attributes rule"));
+                        }
+
+                        let mut iterator = attribute_pair.into_inner();
+                        let attribute_key_pair = iterator.next().unwrap();
+                        let attribute_value_pair = iterator.next().unwrap();
+
+                        if attribute_key_pair.as_rule() != Rule::attribute_key
+                            || attribute_value_pair.as_rule() != Rule::attribute_value
+                        {
+                            return Err(anyhow!("Attribute pairs out of order"));
+                        }
+
+                        template_attributes.insert(
+                            attribute_key_pair.as_span().as_str().to_string(),
+                            attribute_value_pair
+                                .as_span()
+                                .as_str()
+                                .replace("\\\"", "&quot;"),
+                        );
+                    }
+                }
+                Rule::block_children => {
+                    template_children
+                        .extend(Self::lex_html_block_children(lex_state, pair.into_inner())?);
+                }
+                Rule::block_template_content => {
+                    template_children.push(HtmlToken::BlockLine {
+                        content: replace_template_attributes(
+                            pair.as_span().as_str(),
+                            &lex_state.template_attributes,
+                        )?,
+                    });
+                }
+                _ => {
+                    return Err(anyhow!(format!(
+                        "Unexpected block template rule: {:?}",
+                        pair
+                    )))
+                }
+            }
+        }
+
+        html.extend(Self::lex_html_document(
+            &LexerState {
+                template_children: Some(template_children),
+                template_classes: Some(template_classes),
+                template_attributes,
+            },
+            DocumentParser::parse(Rule::document, &template_content).context(format!(
+                "Failed to interpret the provided template '{}'",
+                template_path
+            ))?,
+        )?);
 
         Ok(html)
     }
