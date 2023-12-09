@@ -2,7 +2,7 @@ COMMENT = _{ "\\\\" ~ ( !NEWLINE ~ ANY )* }
 WHITESPACE = _{ NEWLINE+ }
 INDENTATION = _{ ( " " | "\t" )+ }
 
-tailwind_class = _{ ASCII_ALPHANUMERIC+ ~ ( "-" | "/" | "[" | "]" | ASCII_ALPHANUMERIC+ )* }
+tailwind_class = _{ ( !( "." | " " | NEWLINE ) ~ ANY )+ }
 
 attributes = _{ "{" ~ " "* ~ attribute ~ ( " "+ ~ attribute )* ~ " "* ~ "}" }
 attribute = { attribute_key ~ "=" ~ "\"" ~ attribute_value ~ "\"" }
