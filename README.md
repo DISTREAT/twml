@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img height="90" src="docs/bird.png" />
+  <img height="90" src="docs/assets/bird.png" />
   <br />
   <span>TWML</span>
 </h1>
@@ -14,7 +14,7 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-![Document Example](docs/rendered_example.png)
+![Document Example](docs/assets/rendered_example.png)
 
 ```twml
 @font Georgia
