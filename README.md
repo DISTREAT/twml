@@ -1,142 +1,89 @@
-# TWML
+<h1 align="center">
+  <img height="90" src="docs/bird.png" />
+  <br />
+  <span>TWML</span>
+</h1>
 
-Tailwind Markup Language is a [Markup Language](https://en.wikipedia.org/wiki/Markup_language)
-that seeks to convert [TailwindCSS](https://tailwindcss.com/) into a framework for writing documents.
+<h4 align="center">TailwindCSS-focused Template Engine, designed for Documents.</h4>
 
-The syntax is inspired by [Haml](https://haml.info/) and acts as an abstracted version of HTML,
-allowing for quick meta-programming.
+<p align="center">
+  <a href="#about">About</a>
+  -
+  <a href="#installation">Installation</a>
+  -
+  <a href="#documentation">Documentation</a>
+</p>
 
-In essence, writing TWML is like writing a website, but with fancy syntax and built-in support for TailwindCSS
-using [Railwind](https://github.com/pintariching/railwind).
+![Document Example](docs/rendered_example.png)
 
-Although designed for websites, TailwindCSS is simple and flexible, making it perfect for documents.
+```twml
+@font Georgia
+@js https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js
 
-```
-\\ Simple letter example in TWML
-\\ Note: All personal data is computer generated
+\div.page.p-16.font-georgia
+    \p.text-center.text-4xl.font-bold.pt-12 Writing Documents with Ease
+    \p.text-center.text-xl.pt-6
+        John Smith
+        \span.text-sm.align-top 1,2
+        , Robert Smith
+        \span.text-sm.align-top 3
+        and Jane Smith
+        \span.text-sm.align-top 1*
 
-\div.page.p-12.antialiased.font-sans
-    \div.flex
-        \p.text-2xl.m-0 Terry K Duenas
-        \div.flex-1.text-right
-            \span.text-sm
-                3328 Lakewood Drive
-                07002 Bayonne, New Jersey
+    \p.text-center.text-sm.font-serif
+        \span.text-xs.align-top.p-1 1
+        School of Chemistry, The University of Michigan
 
-                Telephone 201-858-7329
-                E-Mail xxxxxxxxxxxxx@xxxxx.xxx
+        \span.text-xs.align-top.p-1 2
+        Physics Department, The University of Wisconsin
 
-    \div.pt-7
-        \p.text-xs.m-0 Terry K Duenas - 3328 Lakewood Drive - 07002 Bayonne, New Jersey
+        \span.text-xs.align-top.p-1 3
+        Biological Sciences Department, The University of Minnesota
+
+    \div.px-7
+        \p.text-center.font-bold.p-4 Abstract
+        \span.italic.break-all
+            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores.
+
+    \div.columns-2.gap-5.text-md.break-all.py-6
+        \p.text-2xl.font-bold.pb-4.text-center Introduction
         \span
-            Application
-            Billy W Vanover
-            387 Joy Lane
-            90071 Los Angeles, California
+            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
+            $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+            \p.text-center.text-xs [1] Quadratic Formula
 
-    \div.pt-12
-        \p.text-sm.m-0 2023-12-05
-        \p.font-bold.m-0 Lorum Ipsum Example Text
+            At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
 
-    \div.pt-7
-        \span
-            Dear Mr. Vanover,
+    \div.absolute.bottom-14
+        \hr.w-40.line
+        \span.text-sm
+            *Corresponding author: jane@smith.com
 
-            The following paragraph is a carefully-selected example of Lorem Ipsum.
-
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque id diam
-            nec nibh rhoncus luctus at vel leo. Orci varius natoque penatibus et magnis
-            dis parturient montes, nascetur ridiculus mus. Quisque eleifend elit eget
-            ligula mattis tempor. Aenean laoreet libero sit amet dolor sollicitudin laoreet.
-            Nam diam nunc, dapibus pretium nunc eu, varius ullamcorper lorem. Phasellus
-            ultrices fringilla augue, ac placerat purus lacinia eget. Phasellus ultricies
-            mi sit amet magna pharetra, et volutpat erat dictum. Sed vel hendrerit ligula.
-
-            Respectfully,
-
-
-            Terry K Duenas
+            \span.font-bold Published:
+            May 14, 2023
 ```
 
-![Example Image](docs/example.png)
+_The example is inspired by this [LaTeX template](https://www.latextemplates.com/template/journal-article)._
 
-_TWML converts documents to PDF using [rust-headless-chrome](https://github.com/rust-headless-chrome/rust-headless-chrome)._
+## About
+
+_Tailwind Markup Language_ is a [Markup Language](https://en.wikipedia.org/wiki/Markup_language)
+and _Template Engine_ that seeks to convert [TailwindCSS](https://tailwindcss.com/) into a framework
+for writing documents.
+
+The syntax is inspired by [Haml](https://haml.info/) and acts as an abstracted version of HTML.
+
+In essence, writing TWML is like writing HTML with built-in support for TailwindCSS using
+[Railwind](https://github.com/pintariching/railwind).
+
+TailwindCSS is simple and flexible, making it perfect for documents.
 
 ## Installation
 
-The master (development) version may be installed via cargo:
+Compile and install from `master`:
 
 ```
 cargo install --git https://github.com/DISTREAT/twml
 ```
 
-## Usage
-
-```
-# pdf
-twml-pdf input.twml output.pdf
-
-# html
-twml-html input.twml output.html
-
-# live rendering via web server
-twml-live document.twml
-```
-
-## Reference
-
-_All tailwind classes can be found at [tailwindcss.com](https://tailwindcss.com/docs)._
-
-Adding an image:
-
-```
-@include image.png
-
-\img{src="image.png"}
-```
-
-Basic _Hello World_:
-
-```
-\p Hello World!
-\\ converted to <p>Hello World</p>
-```
-
-Simple document:
-
-```
-\p.font-3xl.font-semibold.underline Title
-\span
-    Content
-\\ converted to <p class="font-2xl underline">Title</p><span>Content</span>
-```
-
-Underlining text:
-
-```
-\span
-    This is so
-    \span.underline cool
-    !
-```
-
-Multiple pages:
-
-```
-\div.page
-    \p First page
-
-\div.page
-    \p Second page
-```
-
-Page size:
-
-```
-\\ millimeter
-@page-width 150
-@page-height 100
-
-\div.page
-    \p.m-0 Page 1/1 (150x100)
-```
+_Binaries are not yet available._
