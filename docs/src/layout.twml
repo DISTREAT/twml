@@ -1,0 +1,4 @@
+\div.page.px-8.py-4.$
+    \p.text-xl.uppercase.font-bold.pb-2 {id}.0 {title}
+    \span
+        {...}

@@ -1,0 +1,74 @@
+\div
+    \p.text-lg.font-bold {id}.1 About TWML
+
+    TWML is an alternative solution to existing Markup Languages such as LaTeX, Markdown, Asciidoctor, or Troff. In essence, TWML is supposed to be the alternative that seeks to discover the sweet spot between being too simple and being too complex.
+
+    The driving force behind TWML is TailwindCSS, a "stylizing" framework for developing websites. Although TailwindCSS is mainly for website development, it is perfectly capable of creating stunning documents.
+
+    To simplify HTML, the Markup Language used by browsers, TWML, specifies a syntax that abstracts HTML for better readability and an extended feature set, such as importing templates.
+
+    Using TWML requires learning TailwindCSS and the basic structure of HTML.
+
+
+    \p.text-lg.font-bold {id}.2 Features and Shortcomings
+
+    TWML might be of interest to someone that:
+
+    \ul.list-disc
+        \li Already knows TailwindCSS
+        \li Wishes to extend their documents through the use of Javascript or CSS software
+        \li Searches for a more flexible alternative to existing Markup Languages
+
+    TWML might not be of interest to someone that:
+
+    \ul.list-disc
+        \li Is happy with existing Markup Languages
+        \li Is not interested in learning TailwindCSS or HTML
+        \li Does not wish to adapt to breaking changes (TWML is in early development)
+
+    \p.text-lg.font-bold {id}.3 Hello World!
+
+    Setting up TWML requires installing Rust. After setting up
+    \a{href="https://www.rust-lang.org/tools/install"} Rust
+    , installing a development version of TWML should be as simple as running the following command in your shell of preference:
+
+
+    \span.pl-2.text-sm.font-mono
+        cargo install --git https://github.com/DISTREAT/twml
+
+
+    The following software should now be available:
+
+    \div.pl-2.pt-2
+        \span.font-bold twml-html: 
+        Convert a TWML document to html
+
+        \span.font-bold twml-pdf: 
+        Convert a TWML document to pdf
+
+        \span.font-bold twml-live: 
+        Start a webserver that serves a TWML document (used for live preview)
+
+    Let's create a simple document and convert it to PDF:
+
+
+    \span.pl-2.text-sm.font-mono
+        \span \p.font-bold Hello World!
+
+
+    This example should be rather simple to interpret. We create a paragraph with a bold font, containing the text "Hello World!".
+
+    In HTML terms this would translate to: 
+    \span.italic &lt;p class="font-bold"&gt;Hello World!&lt;/p&gt;
+
+
+    \p.text-lg.font-bold {id}.3 Resources
+
+    The perfect resource for understanding how to style your documents is the official 
+    \a{href="https://tailwindcss.com/docs"} TailwindCSS documentation
+    .
+
+    For a good HTML element reference see
+    \a{href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element"} Mozilla's documentation
+    .
+
