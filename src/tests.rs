@@ -6,8 +6,11 @@ use std::{env, fs};
 #[test]
 fn build_documentation() {
     let cwd = env::current_dir().unwrap();
+    let docs = cwd.join("docs");
 
-    for entry in fs::read_dir(cwd.join("docs")).unwrap() {
+    env::set_current_dir(&cwd.join(&docs)).unwrap();
+
+    for entry in fs::read_dir(docs).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
 
