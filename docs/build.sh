@@ -18,10 +18,8 @@ echo "[info] Compiling debug build of twml"
     cargo build
 )
 
-# Convert each twml document into pdf
-for document in *.twml; do
-    printf "[info] Building documentation for '%s'\n" "$document"
-    ../target/debug/twml-pdf "$document" "dist/$(basename "$document" .twml).pdf"
-done
+# Convert twml document into pdf
+echo "[info] Building documentation..."
+../target/debug/twml-pdf docs.twml dist/docs.pdf
 
 echo "[status] Built documentation to ./dist/"
