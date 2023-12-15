@@ -199,6 +199,7 @@ impl DocumentParser {
                     width: {}mm;
                     height: {}mm;
                     overflow: hidden;
+                    page-break-after: always;
                     counter-increment: page-number;
                   }}
 
