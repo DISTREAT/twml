@@ -90,6 +90,10 @@ fn export_pdf(
     if !toc.is_empty() {
         modify_pdf_toc(&local_pdf[..], &mut output_pdf, toc)
             .context("Failed to append a pdf outline")?;
+    } else {
+        output_pdf
+            .write_all(&local_pdf[..])
+            .context("Failed to write to pdf")?;
     }
 
     Ok(())
