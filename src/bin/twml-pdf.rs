@@ -26,18 +26,21 @@ fn main() -> Result<()> {
         fs::read_to_string(&arguments[1]).context("Failed to read the input document")?;
     let pairs = DocumentParser::parse(Rule::document, &document)
         .context("Failed to interpret the provided document")?;
-    let declarations = DocumentParser::get_declarations(pairs.clone())
-        .context("Failed to parse the declarations")?;
     let mut lex_state = LexerState::default();
-    let html = DocumentParser::generate_html(&declarations, &mut lex_state, pairs)
+    let html = DocumentParser::generate_html(&mut lex_state, pairs)
         .context("Failed to generate html code")?;
 
     let time = SystemTime::now().duration_since(UNIX_EPOCH)?.subsec_nanos();
     let temporary_dir_path = env::temp_dir().join(format!("twml-live-{}", time));
     fs::create_dir(&temporary_dir_path).context("Failed to create a temporary directory")?;
 
-    let index_path = setup_rendering_env(&declarations, &temporary_dir_path, &html)?;
-    export_pdf(&declarations, lex_state.toc, &index_path, &arguments[2])?;
+    let index_path = setup_rendering_env(&lex_state.declarations, &temporary_dir_path, &html)?;
+    export_pdf(
+        &lex_state.declarations,
+        lex_state.toc,
+        &index_path,
+        &arguments[2],
+    )?;
 
     fs::remove_dir_all(&temporary_dir_path).context("Failed to clean up temporary directory")?;
 

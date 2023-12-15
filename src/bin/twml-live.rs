@@ -53,18 +53,15 @@ async fn main() -> Result<()> {
 
                     match pairs_result {
                         Ok(pairs) => {
-                            let declarations = DocumentParser::get_declarations(pairs.clone())
-                                .expect("Failed to parse the declarations");
                             let mut lex_state = LexerState::default();
-                            let html =
-                                DocumentParser::generate_html(&declarations, &mut lex_state, pairs)
-                                    .expect("Failed to generate html code");
+                            let html = DocumentParser::generate_html(&mut lex_state, pairs)
+                                .expect("Failed to generate html code");
 
                             let _ = index_file.set_len(0);
                             write!(index_file, "{}", html).unwrap();
 
                             DocumentParser::include_linked_files(
-                                &declarations,
+                                &lex_state.declarations,
                                 &temporary_dir_path,
                             )
                             .expect("Failed to include linked files");

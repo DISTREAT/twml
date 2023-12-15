@@ -17,10 +17,8 @@ fn main() -> Result<()> {
         fs::read_to_string(&arguments[1]).context("Failed to read the input document")?;
     let pairs = DocumentParser::parse(Rule::document, &document)
         .context("Failed to interpret the provided document")?;
-    let declarations = DocumentParser::get_declarations(pairs.clone())
-        .context("Failed to parse the declarations")?;
     let mut lex_state = LexerState::default();
-    let html = DocumentParser::generate_html(&declarations, &mut lex_state, pairs)
+    let html = DocumentParser::generate_html(&mut lex_state, pairs)
         .context("Failed to generate html code")?;
 
     fs::write(&arguments[2], html).context("Failed to write the output html")?;

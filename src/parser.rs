@@ -18,7 +18,7 @@ pub type TocEntry = (String, usize);
 #[grammar = "grammar.pest"]
 pub struct DocumentParser;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Declarations {
     pub include: Vec<String>,
     pub js: Vec<String>,
@@ -41,6 +41,7 @@ enum HtmlToken {
 
 #[derive(Debug, Default)]
 pub struct LexerState {
+    pub declarations: Declarations,
     page_number: usize,
     pub toc: Vec<TocEntry>,
     template_children: Option<Vec<HtmlToken>>,
@@ -63,80 +64,6 @@ fn replace_template_attributes(
 }
 
 impl DocumentParser {
-    pub fn get_declarations(mut pairs: Pairs<Rule>) -> Result<Declarations> {
-        let mut include: Vec<String> = Vec::new();
-        let mut js: Vec<String> = Vec::new();
-        let mut css: Vec<String> = Vec::new();
-        let mut fonts: Vec<Font> = Vec::new();
-        let mut page_width_mm: Option<u64> = None;
-        let mut page_height_mm: Option<u64> = None;
-
-        for pair in pairs.next().unwrap().into_inner() {
-            match pair.as_rule() {
-                Rule::declaration => {
-                    let mut iterator = pair.into_inner();
-                    let declaration_key_pair = iterator.next().unwrap();
-                    let declaration_value_pair = iterator.next().unwrap();
-
-                    if declaration_key_pair.as_rule() != Rule::declaration_key
-                        || declaration_value_pair.as_rule() != Rule::declaration_value
-                    {
-                        return Err(anyhow!("Declaration pairs out of order"));
-                    }
-
-                    let declaration_key = declaration_key_pair.as_span().as_str();
-                    let declaration_value = declaration_value_pair.as_span().as_str();
-
-                    match declaration_key {
-                        "include" => include.push(declaration_value.to_string()),
-                        "page-width" => {
-                            page_width_mm = Some(
-                                declaration_value
-                                    .parse::<u64>()
-                                    .context("The page-width value is not of u64 value")?,
-                            )
-                        }
-                        "page-height" => {
-                            page_height_mm = Some(
-                                declaration_value
-                                    .parse::<u64>()
-                                    .context("The page-height value is not of u64 value")?,
-                            )
-                        }
-                        "font" => {
-                            fonts.push(
-                                SystemSource::new()
-                                    .select_by_postscript_name(declaration_value)
-                                    .context("Could not find the selected font")?
-                                    .load()?,
-                            );
-                        }
-                        "js" => js.push(declaration_value.to_string()),
-                        "css" => css.push(declaration_value.to_string()),
-                        _ => {
-                            return Err(anyhow!(format!(
-                                "The declaration key '{}' is unexpected",
-                                declaration_key
-                            )))
-                        }
-                    }
-                }
-                Rule::block => {}
-                Rule::EOI => {}
-                _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
-            }
-        }
-
-        Ok(Declarations {
-            include,
-            js,
-            css,
-            fonts,
-            page_width_mm,
-            page_height_mm,
-        })
-    }
-
     pub fn include_linked_files(declarations: &Declarations, temporary_dir: &Path) -> Result<()> {
         for file in &declarations.include {
             fs::copy(
@@ -171,11 +98,7 @@ impl DocumentParser {
         Ok(())
     }
 
-    pub fn generate_html(
-        declarations: &Declarations,
-        lex_state: &mut LexerState,
-        pairs: Pairs<Rule>,
-    ) -> Result<String> {
+    pub fn generate_html(lex_state: &mut LexerState, pairs: Pairs<Rule>) -> Result<String> {
         let html_tokens = Self::lex_html_document(lex_state, pairs)?;
         let html_body = Self::generate_html_body(&html_tokens, 4, "")?;
 
@@ -219,9 +142,9 @@ impl DocumentParser {
         "}
         .format(&[
             // default: A4
-            declarations.page_width_mm.unwrap_or(210).to_string(),
-            declarations.page_height_mm.unwrap_or(297).to_string(),
-            declarations
+            lex_state.declarations.page_width_mm.unwrap_or(210).to_string(),
+            lex_state.declarations.page_height_mm.unwrap_or(297).to_string(),
+            lex_state.declarations
                 .fonts
                 .iter()
                 .map(|font| {
@@ -237,14 +160,14 @@ impl DocumentParser {
                 .replace(";\n", ";\n    ")
                 .replace("{\n", "{\n    ")
                 .replace('}', "  }"),
-            declarations
+            lex_state.declarations
                 .css
                 .iter()
                 .map(|src| format!("<link rel=\"stylesheet\" href=\"{}\" />", src))
                 .intersperse(String::from("\n    "))
                 .collect(),
             html_body,
-            declarations
+            lex_state.declarations
                 .js
                 .iter()
                 .map(|src| format!("<script src=\"{}\"></script>", src))
@@ -342,14 +265,75 @@ impl DocumentParser {
 
         for pair in pairs.next().unwrap().into_inner() {
             match pair.as_rule() {
+                Rule::declaration => Self::lex_html_declaration(lex_state, pair)
+                    .context("Failed to parse a declaration")?,
                 Rule::block => html.extend(Self::lex_html_block(lex_state, pair.into_inner())?),
-                Rule::declaration => {}
                 Rule::EOI => {}
                 _ => return Err(anyhow!(format!("Unexpected document rule: {:?}", pair))),
             }
         }
 
         Ok(html)
+    }
+
+    fn lex_html_declaration(lex_state: &mut LexerState, pair: Pair<Rule>) -> Result<()> {
+        let mut iterator = pair.into_inner();
+        let declaration_key_pair = iterator.next().unwrap();
+        let declaration_value_pair = iterator.next().unwrap();
+
+        if declaration_key_pair.as_rule() != Rule::declaration_key
+            || declaration_value_pair.as_rule() != Rule::declaration_value
+        {
+            return Err(anyhow!("Declaration pairs out of order"));
+        }
+
+        let declaration_key = declaration_key_pair.as_span().as_str();
+        let declaration_value = declaration_value_pair.as_span().as_str();
+
+        match declaration_key {
+            "include" => lex_state
+                .declarations
+                .include
+                .push(declaration_value.to_string()),
+            "page-width" => {
+                lex_state.declarations.page_width_mm = Some(
+                    declaration_value
+                        .parse::<u64>()
+                        .context("The page-width value is not of u64 value")?,
+                )
+            }
+            "page-height" => {
+                lex_state.declarations.page_height_mm = Some(
+                    declaration_value
+                        .parse::<u64>()
+                        .context("The page-height value is not of u64 value")?,
+                )
+            }
+            "font" => {
+                lex_state.declarations.fonts.push(
+                    SystemSource::new()
+                        .select_by_postscript_name(declaration_value)
+                        .context("Could not find the selected font")?
+                        .load()?,
+                );
+            }
+            "js" => lex_state
+                .declarations
+                .js
+                .push(declaration_value.to_string()),
+            "css" => lex_state
+                .declarations
+                .css
+                .push(declaration_value.to_string()),
+            _ => {
+                return Err(anyhow!(format!(
+                    "The declaration key '{}' is unexpected",
+                    declaration_key
+                )))
+            }
+        }
+
+        Ok(())
     }
 
     fn lex_html_block(lex_state: &mut LexerState, pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
@@ -603,6 +587,7 @@ impl DocumentParser {
         }
 
         let mut inner_lex_state = LexerState {
+            declarations: Declarations::default(),
             page_number: lex_state.page_number,
             toc: Vec::new(),
             template_children: Some(template_children),
@@ -619,6 +604,22 @@ impl DocumentParser {
         )?);
 
         lex_state.page_number = inner_lex_state.page_number;
+        lex_state
+            .declarations
+            .js
+            .extend(inner_lex_state.declarations.js);
+        lex_state
+            .declarations
+            .css
+            .extend(inner_lex_state.declarations.css);
+        lex_state
+            .declarations
+            .fonts
+            .extend(inner_lex_state.declarations.fonts);
+        lex_state
+            .declarations
+            .include
+            .extend(inner_lex_state.declarations.include);
         lex_state.toc.extend(inner_lex_state.toc);
 
         Ok(html)
