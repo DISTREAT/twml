@@ -3,7 +3,7 @@ use pest::Parser;
 use std::env;
 use std::fs;
 use std::process::exit;
-use twml::parser::{DocumentParser, Rule};
+use twml::parser::{DocumentParser, LexerState, Rule};
 
 fn main() -> Result<()> {
     let arguments: Vec<String> = env::args().collect();
@@ -19,7 +19,8 @@ fn main() -> Result<()> {
         .context("Failed to interpret the provided document")?;
     let declarations = DocumentParser::get_declarations(pairs.clone())
         .context("Failed to parse the declarations")?;
-    let html = DocumentParser::generate_html(&declarations, pairs)
+    let mut lex_state = LexerState::default();
+    let html = DocumentParser::generate_html(&declarations, &mut lex_state, pairs)
         .context("Failed to generate html code")?;
 
     fs::write(&arguments[2], html).context("Failed to write the output html")?;

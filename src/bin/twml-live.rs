@@ -8,7 +8,7 @@ use std::io::Write;
 use std::process::exit;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use twml::parser::{DocumentParser, Rule};
+use twml::parser::{DocumentParser, LexerState, Rule};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -55,8 +55,10 @@ async fn main() -> Result<()> {
                         Ok(pairs) => {
                             let declarations = DocumentParser::get_declarations(pairs.clone())
                                 .expect("Failed to parse the declarations");
-                            let html = DocumentParser::generate_html(&declarations, pairs)
-                                .expect("Failed to generate html code");
+                            let mut lex_state = LexerState::default();
+                            let html =
+                                DocumentParser::generate_html(&declarations, &mut lex_state, pairs)
+                                    .expect("Failed to generate html code");
 
                             let _ = index_file.set_len(0);
                             write!(index_file, "{}", html).unwrap();

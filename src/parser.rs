@@ -12,6 +12,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+pub type TocEntry = (String, usize);
+
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct DocumentParser;
@@ -37,8 +39,10 @@ enum HtmlToken {
     BlockLine { content: String },
 }
 
-#[derive(Debug)]
-struct LexerState {
+#[derive(Debug, Default)]
+pub struct LexerState {
+    page_number: usize,
+    pub toc: Vec<TocEntry>,
     template_children: Option<Vec<HtmlToken>>,
     template_classes: Option<Vec<String>>,
     template_attributes: HashMap<String, String>,
@@ -167,15 +171,12 @@ impl DocumentParser {
         Ok(())
     }
 
-    pub fn generate_html(declarations: &Declarations, pairs: Pairs<Rule>) -> Result<String> {
-        let html_tokens = Self::lex_html_document(
-            &LexerState {
-                template_children: None,
-                template_classes: None,
-                template_attributes: HashMap::new(),
-            },
-            pairs,
-        )?;
+    pub fn generate_html(
+        declarations: &Declarations,
+        lex_state: &mut LexerState,
+        pairs: Pairs<Rule>,
+    ) -> Result<String> {
+        let html_tokens = Self::lex_html_document(lex_state, pairs)?;
         let html_body = Self::generate_html_body(&html_tokens, 4, false, "")?;
 
         let mut warnings: Vec<railwind::warning::Warning> = Vec::new();
@@ -328,7 +329,10 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_document(lex_state: &LexerState, mut pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_document(
+        lex_state: &mut LexerState,
+        mut pairs: Pairs<Rule>,
+    ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs.next().unwrap().into_inner() {
@@ -343,7 +347,7 @@ impl DocumentParser {
         Ok(html)
     }
 
-    fn lex_html_block(lex_state: &LexerState, pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
+    fn lex_html_block(lex_state: &mut LexerState, pairs: Pairs<Rule>) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
 
         for pair in pairs {
@@ -371,7 +375,7 @@ impl DocumentParser {
     }
 
     fn lex_html_block_children(
-        lex_state: &LexerState,
+        lex_state: &mut LexerState,
         pairs: Pairs<Rule>,
     ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
@@ -393,10 +397,11 @@ impl DocumentParser {
     }
 
     fn lex_html_block_element(
-        lex_state: &LexerState,
+        lex_state: &mut LexerState,
         element_pair: Pair<Rule>,
     ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
+        let mut toc = false;
 
         for pair in element_pair.into_inner() {
             match pair.as_rule() {
@@ -404,6 +409,8 @@ impl DocumentParser {
                     html.push(HtmlToken::ElementName {
                         name: pair.as_span().as_str().to_string(),
                     });
+
+                    toc = false;
                 }
                 Rule::block_element_classes => {
                     let mut classes: Vec<String> = Vec::new();
@@ -418,6 +425,14 @@ impl DocumentParser {
                             }
                             _ => return Err(anyhow!("Unexpected element_classes rule")),
                         }
+                    }
+
+                    if classes.iter().any(|class| class.as_str() == "toc") {
+                        toc = true;
+                    }
+
+                    if classes.iter().any(|class| class.as_str() == "page") {
+                        lex_state.page_number += 1;
                     }
 
                     html.push(HtmlToken::ElementClasses { classes });
@@ -452,12 +467,16 @@ impl DocumentParser {
                     html.push(HtmlToken::ElementAttributes { attributes });
                 }
                 Rule::block_element_content => {
-                    html.push(HtmlToken::ElementInlineContent {
-                        content: replace_template_attributes(
-                            pair.as_span().as_str(),
-                            &lex_state.template_attributes,
-                        )?,
-                    });
+                    let content = replace_template_attributes(
+                        pair.as_span().as_str(),
+                        &lex_state.template_attributes,
+                    )?;
+
+                    if toc {
+                        lex_state.toc.push((content.clone(), lex_state.page_number))
+                    }
+
+                    html.push(HtmlToken::ElementInlineContent { content });
                 }
                 Rule::block_children => {
                     html.push(HtmlToken::ElementChildren {
@@ -477,7 +496,7 @@ impl DocumentParser {
     }
 
     fn lex_html_block_template(
-        lex_state: &LexerState,
+        lex_state: &mut LexerState,
         template_pair: Pair<Rule>,
     ) -> Result<Vec<HtmlToken>> {
         let mut html: Vec<HtmlToken> = Vec::new();
@@ -578,17 +597,24 @@ impl DocumentParser {
             }
         }
 
+        let mut inner_lex_state = LexerState {
+            page_number: lex_state.page_number,
+            toc: Vec::new(),
+            template_children: Some(template_children),
+            template_classes: Some(template_classes),
+            template_attributes,
+        };
+
         html.extend(Self::lex_html_document(
-            &LexerState {
-                template_children: Some(template_children),
-                template_classes: Some(template_classes),
-                template_attributes,
-            },
+            &mut inner_lex_state,
             DocumentParser::parse(Rule::document, &template_content).context(format!(
                 "Failed to interpret the provided template '{}'",
                 template_path
             ))?,
         )?);
+
+        lex_state.page_number = inner_lex_state.page_number;
+        lex_state.toc.extend(inner_lex_state.toc);
 
         Ok(html)
     }
