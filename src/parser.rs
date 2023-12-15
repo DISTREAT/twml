@@ -177,7 +177,7 @@ impl DocumentParser {
         pairs: Pairs<Rule>,
     ) -> Result<String> {
         let html_tokens = Self::lex_html_document(lex_state, pairs)?;
-        let html_body = Self::generate_html_body(&html_tokens, 4, false, "")?;
+        let html_body = Self::generate_html_body(&html_tokens, 4, "")?;
 
         let mut warnings: Vec<railwind::warning::Warning> = Vec::new();
         let generated_css = railwind::parse_to_string(
@@ -257,7 +257,6 @@ impl DocumentParser {
     fn generate_html_body(
         tokens: &Vec<HtmlToken>,
         indentation: usize,
-        children: bool,
         element_name: &str,
     ) -> Result<String> {
         let mut html = String::new();
@@ -296,7 +295,6 @@ impl DocumentParser {
                     html.push_str(&Self::generate_html_body(
                         children,
                         indentation + 2,
-                        true,
                         element_name,
                     )?);
                     html.push_str(&format!("\n{}</{}>", " ".repeat(indentation), element_name));
@@ -328,7 +326,7 @@ impl DocumentParser {
             }
         }
 
-        if element_unclosed && !children {
+        if element_unclosed {
             html.push_str(" />");
         }
 
