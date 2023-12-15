@@ -199,6 +199,11 @@ impl DocumentParser {
                     width: {}mm;
                     height: {}mm;
                     overflow: hidden;
+                    counter-increment: page-number;
+                  }}
+
+                  .page-number::before {{
+                    content: counter(page-number);
                   }}
                   {}
                   {}
