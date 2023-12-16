@@ -241,6 +241,11 @@ impl DocumentParser {
                     html.push_str(content);
                 }
                 HtmlToken::EmptyBlockLine => {
+                    if element_unclosed {
+                        html.push_str(" />");
+                        element_unclosed = false;
+                    }
+
                     if element_name != "pre" {
                         html.push_str("<br />");
                     }
