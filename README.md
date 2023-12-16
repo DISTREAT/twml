@@ -11,7 +11,7 @@
   -
   <a href="#installation">Installation</a>
   -
-  <a href="#documentation">Documentation</a>
+  <a href="https://github.com/DISTREAT/twml/blob/master/docs/dist/docs.pdf">Documentation</a>
 </p>
 
 ![Document Example](docs/assets/rendered_example.png)
