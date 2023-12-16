@@ -84,6 +84,7 @@ fn export_pdf(
             margin_bottom: Some(0.0),
             margin_left: Some(0.0),
             margin_right: Some(0.0),
+            print_background: Some(true),
             ..PrintToPdfOptions::default()
         }))
         .context("Failed to render the pdf")?;
