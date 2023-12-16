@@ -37,10 +37,24 @@ async fn main() -> Result<()> {
 
     println!("Server running on: http://127.0.0.1:8080/");
 
+    let mut last_update = SystemTime::now();
     let mut watcher = notify::recommended_watcher(
         move |result: Result<notify::Event, notify::Error>| match result {
             Ok(event) => {
-                if event.kind.is_modify() && event.paths.contains(&document_path) {
+                if event.kind.is_modify() {
+                    // Some editors modify a file multiple times. To mitigate this issue, a simple
+                    // limiter is implemented
+                    if last_update
+                        .elapsed()
+                        .expect("Failed to obtain elapsed time")
+                        .as_micros()
+                        <= 500
+                    {
+                        return;
+                    }
+
+                    last_update = SystemTime::now();
+
                     // Some programs (formatters?) seem to remove a file shortly after modifying
                     // and this can cause race conditions. Therefore we introduce a small delay,
                     // hoping that this will decrease the risk of this race condition from
@@ -78,7 +92,7 @@ async fn main() -> Result<()> {
         },
     )?;
 
-    watcher.watch(document_parent_path, notify::RecursiveMode::NonRecursive)?;
+    watcher.watch(document_parent_path, notify::RecursiveMode::Recursive)?;
 
     server.await?;
 
