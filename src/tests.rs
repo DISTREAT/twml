@@ -1,4 +1,4 @@
-use crate::parser::{DocumentParser, Rule};
+use crate::parser::{DocumentParser, LexerState, Rule};
 use pest::Parser;
 use std::ffi::OsStr;
 use std::{env, fs};
@@ -20,7 +20,7 @@ fn build_documentation() {
 
         let document = fs::read_to_string(&path).unwrap();
         let pairs = DocumentParser::parse(Rule::document, &document).unwrap();
-        let declarations = DocumentParser::get_declarations(pairs.clone()).unwrap();
-        let _ = DocumentParser::generate_html(&declarations, pairs).unwrap();
+        let mut lex_state = LexerState::default();
+        let _ = DocumentParser::generate_html(&mut lex_state, pairs).unwrap();
     }
 }
