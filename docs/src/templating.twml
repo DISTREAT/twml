@@ -1,0 +1,98 @@
+\!src-subtitle {id}.1 Concept
+
+TWML supports including other documents. This is what in TWML terminology is refered to as
+\span.italic templating
+or
+\span.italic templates
+.
+
+Documents may be imported from one of the following paths:
+\ul.list-disc
+    \li The current working directory.
+    \li.italic $HOME/.config/twml/templates/
+    \li.italic /usr/share/twml/templates/
+
+\!src-subtitle {id}.2 Simple Example
+
+\p.italic ./document.twml:
+\!src-codebox
+    \pre \!directory-hello
+
+\p.italic ./directory/hello.twml:
+\!src-codebox
+    \pre \p Hello World!
+
+\p Hello World!
+
+The document
+\span.italic document.twml
+will import
+\span.italic directory/hello.twml
+when calling
+\span.italic.bg-slate-100 \!hello
+.
+
+
+\!src-subtitle {id}.3 Attributes
+
+Attributes are a way to pass variables to a template.
+
+
+\p.italic ./document.twml:
+\!src-codebox
+    \pre \!hello{name="John"}
+
+\p.italic ./hello.twml
+\!src-codebox
+    \pre \p Hello {name}!
+
+\p Hello John!
+
+Placeholders like these can be escaped using
+\span.italic.bg-slate-100 {{name}}
+.
+
+
+\!src-subtitle {id}.4 Children
+
+It is also possible to add children to an imported element:
+
+\p.italic ./document.twml:
+\!src-codebox
+    \pre \!hello
+    \pre     \p Hello there!
+
+\p.italic ./hello.twml
+\!src-codebox
+    \pre \p.font-bold
+    \pre     {...}
+
+\p.font-bold Hello there!
+
+Placeholders like these can be escaped using
+\span.italic.bg-slate-100 {{name}}
+.
+
+
+\p.italic
+    Note:
+    \span.italic.bg-slate-100 \p.font-bold {...}
+    would be illegal.
+    \span.italic.bg-slate-100 {...}
+    must always be a child of an element.
+
+\!src-subtitle {id}.5 Classes
+
+Templates may also hold placeholders for additional classes:
+
+
+\p.italic ./document.twml:
+\!src-codebox
+    \pre \!hello.font-bold
+
+\p.italic ./hello.twml
+\!src-codebox
+    \pre \p.$ Hello there!
+
+\p.font-bold Hello there!
+

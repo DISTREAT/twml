@@ -1,6 +1,17 @@
-@font Georgia
-
-\p.pt-4.px-8.text-xs.font-bold.text-red-700 NOTE: TWML is in heavy development and subject to change!
-
-\!src-layout.font-georgia{id="1" title="Getting Started"}
+\div.px-8.py-4
+    \p.text-sm.font-bold.text-red-700 NOTE: TWML is in heavy development and subject to change!
+    \!src-title{id="1" title="Getting Started"}
     \!src-quickstart{id="1"}
+
+    \div.break-before-page
+        \!src-title{id="2" title="Pages"}
+        \!src-pages{id="2"}
+
+    \div.break-before-page
+        \!src-title{id="3" title="Including Files"}
+        \!src-include{id="3"}
+
+    \div.break-before-page
+        \!src-title{id="4" title="Templating"}
+        \!src-templating{id="4"}
+

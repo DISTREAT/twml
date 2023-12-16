@@ -1,0 +1,67 @@
+@font Cantarell-Regular
+@js https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js
+@include assets/bird.png
+
+\!src-subtitle {id}.1 Adding a custom font
+
+A custom font may be included by it's postscript name:
+
+\!src-codebox
+    \pre @font Cantarell-Regular
+    \br
+    \pre \p.font-cantarell-regular This text is in Cantarell-Regular
+
+\p.font-cantarell-regular This text is in Cantarell-Regular
+
+
+\!src-subtitle {id}.2 Including Files
+
+Including files is similar to including fonts:
+
+\!src-codebox
+    \pre @include assets/bird.png
+    \br
+    \pre \img{src="bird.png" height="50"}
+
+\img{src="bird.png" height="50"}
+
+
+\!src-subtitle {id}.3 Including JS
+
+JavaScript can extend the functionality and make it possible to add for example graphs.
+
+\!src-codebox
+    \pre @js https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js
+    \br
+    \pre \pre.mermaid
+    \pre     graph TD
+    \pre     A[Client] --> B[Load Balancer]
+    \pre     B --> C[Server01]
+    \pre     B --> D[Server02]
+    \br
+    \pre \script
+    \pre     mermaid.initialize({ startOnLoad: true });
+
+\pre.mermaid
+    graph TD
+    A[Client] --> B[Load Balancer]
+    B --> C[Server01]
+    B --> D[Server02]
+
+\script
+    mermaid.initialize({ startOnLoad: true });
+
+
+\!src-subtitle {id}.4 Including CSS
+
+Similarly, CSS may be included:
+
+\!src-codebox
+    \pre @include skelly.css
+    \pre @css skelly.css
+    \br
+    \pre \div.w-28.h-28.skelly
+
+\\ Ultra hakx activated
+\p.w-28.h-28.bg-slate-300.rounded-xl
+

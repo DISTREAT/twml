@@ -1,0 +1,57 @@
+\!src-subtitle {id}.1 Adding pages
+
+TWML comes shipped with builtin CSS classes. One of them is the
+\span.p-1.bg-slate-100 page
+class, used for creating new pages.
+
+\!src-codebox
+    \pre \div.page
+    \pre     \p This is page number 1.
+    \br
+    \pre \div.page
+    \pre     \p This is page number 2.
+
+The above example will created a document with two pages.
+
+
+\!src-subtitle {id}.2 Obtaining the page number
+
+The class
+\span.p-1.bg-slate-100 page-number
+replaces an element's content with the current page number.
+
+\!src-codebox
+    \pre \div.page
+    \pre     This is page number: 
+    \pre     \span.page-number
+
+This is page number: 1
+
+
+\!src-subtitle {id}.3 Changing the paper size
+
+Changing the paper size is done using top-level declarations in the root of the document:
+
+\!src-codebox
+    \pre @page-width 100
+    \pre @page-height 200
+    \br
+    \pre \div.page
+    \pre     This page is 100mm in width and 200mm in height.
+
+\!src-subtitle {id}.4 PDF Outline
+
+The following example adds a table of contents to the PDF (also called bookmarks):
+
+\!src-codebox
+    \pre \div.page
+    \pre     \p.toc Page 1
+    \br
+    \pre \div.page
+    \pre     \p.toc Page 2
+
+\p.italic
+    Note: Defining pages is required in this specific case.
+    \span The ToC class only work if an element has inline content and not content in form of children.
+
+
