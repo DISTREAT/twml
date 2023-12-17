@@ -86,4 +86,4 @@ Compile and install from `master`:
 cargo install --git https://github.com/DISTREAT/twml
 ```
 
-_Binaries are not yet available._
+Compiled binaries can be found [here](https://github.com/DISTREAT/twml/releases).
